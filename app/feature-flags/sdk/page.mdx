@@ -1,0 +1,148 @@
+# SDK
+
+The AppDispatch SDK is an [OpenFeature](https://openfeature.dev) provider. Install it alongside the OpenFeature SDK for your platform.
+
+## Installation
+
+```bash npm2yarn
+npm install @appdispatch/openfeature-provider @openfeature/react-sdk
+```
+
+For server-side Node.js:
+
+```bash npm2yarn
+npm install @appdispatch/openfeature-provider @openfeature/server-sdk
+```
+
+## React / React Native setup
+
+```jsx
+import { OpenFeature, OpenFeatureProvider } from '@openfeature/react-sdk'
+import { DispatchProvider } from '@appdispatch/openfeature-provider'
+
+OpenFeature.setProvider(
+  new DispatchProvider({
+    baseUrl: 'https://api.appdispatch.com',
+    projectSlug: 'your-project',
+    apiKey: 'YOUR_API_KEY',
+    channel: 'production',
+  })
+)
+
+export default function App() {
+  return (
+    <OpenFeatureProvider>
+      <YourApp />
+    </OpenFeatureProvider>
+  )
+}
+```
+
+## Evaluating flags
+
+```jsx
+import {
+  useBooleanFlagValue,
+  useStringFlagValue,
+  useNumberFlagValue,
+  useObjectFlagValue,
+} from '@openfeature/react-sdk'
+
+function MyComponent() {
+  // Boolean — kill switches, feature toggles
+  const enabled = useBooleanFlagValue('new-checkout', false)
+
+  // String — A/B variants, theme names
+  const variant = useStringFlagValue('theme', 'default')
+
+  // Number — limits, thresholds
+  const limit = useNumberFlagValue('max-items', 10)
+
+  // JSON — complex config objects
+  const config = useObjectFlagValue('settings', {})
+}
+```
+
+The second argument is the **default value** — returned when the flag doesn't exist, is disabled, or the provider hasn't loaded yet.
+
+## Setting evaluation context
+
+For targeting rules, set the evaluation context with the user's identity and any attributes you want to target on:
+
+```jsx
+import { OpenFeature } from '@openfeature/react-sdk'
+import { Platform } from 'react-native'
+
+// Set after login — include any attributes your targeting rules use
+OpenFeature.setContext({
+  targetingKey: currentUser.id,
+  kind: 'user',
+  name: currentUser.displayName,
+  email: currentUser.email,
+  plan: currentUser.plan,            // 'free', 'pro', 'enterprise'
+  platform: Platform.OS,             // 'ios', 'android'
+  appVersion: '2.4.1',
+  country: currentUser.country,
+})
+```
+
+- `targetingKey` (required for targeting) — unique identifier for user list and percentage rollout rules
+- `kind` — context type, defaults to `"user"`. Use `"device"`, `"organization"`, or `"service"` for non-user contexts
+- `name` — display name shown in the Contexts dashboard
+- All other properties are custom attributes available for [attribute targeting rules](/feature-flags#attribute-rules) and [segment conditions](/feature-flags/segments)
+
+Update the context whenever attributes change (e.g., plan upgrade):
+
+```jsx
+OpenFeature.setContext({
+  ...existingContext,
+  plan: 'pro',
+})
+```
+
+## Server-side usage
+
+```js
+import { OpenFeature } from '@openfeature/server-sdk'
+import { DispatchProvider } from '@appdispatch/openfeature-provider'
+
+OpenFeature.setProvider(
+  new DispatchProvider({
+    baseUrl: 'https://api.appdispatch.com',
+    projectSlug: 'your-project',
+    apiKey: 'YOUR_API_KEY',
+    channel: 'production',
+  })
+)
+
+const client = OpenFeature.getClient()
+
+// Evaluate with user context
+const enabled = await client.getBooleanValue(
+  'new-checkout',
+  false,
+  { targetingKey: request.userId }
+)
+```
+
+## Provider options
+
+| Option | Required | Default | Description |
+|--------|----------|---------|-------------|
+| `baseUrl` | Yes | — | AppDispatch API URL |
+| `projectSlug` | Yes | — | Project slug from the dashboard |
+| `apiKey` | No | — | API key for authenticated requests |
+| `channel` | No | — | Channel (e.g., `production`, `staging`) |
+| `pollIntervalMs` | No | `30000` | How often to refresh flag definitions (ms) |
+| `flushIntervalMs` | No | `60000` | How often to send evaluation reports (ms). Set to `0` to disable. |
+
+## How it works
+
+1. On initialization, the provider fetches all flag definitions in one request
+2. Definitions are cached in memory
+3. Polls for updates every 30 seconds (configurable)
+4. Flag evaluations happen locally — no network call per evaluation
+5. Deterministic hashing ensures stable rollout bucketing
+6. Evaluations are batched and reported to the server every 60 seconds for analytics
+
+See [OpenFeature Provider](/feature-flags/openfeature) for the full architecture.

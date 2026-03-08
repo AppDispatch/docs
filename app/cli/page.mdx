@@ -1,0 +1,72 @@
+# CLI Reference
+
+The Dispatch CLI (`dispatch`) lets you publish OTA updates for your Expo & React Native app from the command line.
+
+## Installation
+
+Download the latest binary for your platform from [GitHub Releases](https://github.com/AppDispatch/cli/releases):
+
+| Platform | Binary |
+|----------|--------|
+| macOS (Apple Silicon) | `dispatch-darwin-arm64` |
+| macOS (Intel) | `dispatch-darwin-x64` |
+| Linux (x64) | `dispatch-linux-x64` |
+| Linux (ARM64) | `dispatch-linux-arm64` |
+
+```bash
+# macOS (Apple Silicon)
+curl -sL https://github.com/AppDispatch/cli/releases/latest/download/dispatch-darwin-arm64 \
+  -o /usr/local/bin/dispatch
+chmod +x /usr/local/bin/dispatch
+```
+
+Or pin to a specific version:
+
+```bash
+curl -sL https://github.com/AppDispatch/cli/releases/download/v0.1.12/dispatch-darwin-arm64 \
+  -o /usr/local/bin/dispatch
+chmod +x /usr/local/bin/dispatch
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| [`dispatch login`](/cli/login) | Authenticate with AppDispatch |
+| [`dispatch init`](/cli/init) | Initialize a project for OTA updates |
+| [`dispatch publish`](/cli/publish) | Export and publish an OTA update |
+
+## Global options
+
+```
+--help       Print help information
+--version    Print version information
+```
+
+## Configuration files
+
+The CLI stores configuration in two locations:
+
+### User credentials
+
+Saved by `dispatch login` at `~/.dispatch/credentials.json`:
+
+```json
+{
+  "server": "https://api.appdispatch.com",
+  "apiKey": "your-api-key"
+}
+```
+
+### Project config
+
+Saved by `dispatch init` at `.dispatch/config.json` in your project root:
+
+```json
+{
+  "projectUuid": "...",
+  "projectSlug": "my-app"
+}
+```
+
+> Add `.dispatch/` to your `.gitignore` — `dispatch init` does this automatically.

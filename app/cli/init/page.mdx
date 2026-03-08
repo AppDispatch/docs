@@ -1,0 +1,48 @@
+# dispatch init
+
+Initialize your Expo project for OTA updates. This is an interactive command that connects your local project to an AppDispatch project.
+
+## Usage
+
+```bash
+dispatch init
+```
+
+> Run this from your project root (where `app.json` lives).
+
+## Prerequisites
+
+- You must run [`dispatch login`](/cli/login) first
+- Your project must have an `app.json` file
+
+## What it does
+
+1. **Prompts you to select a project** from your AppDispatch dashboard
+2. **Installs dependencies**:
+   - `expo-updates` via `npx expo install`
+   - `@expo/fingerprint` via `npm install --save-dev`
+3. **Patches `app.json`** with the required update configuration:
+   ```json
+   {
+     "expo": {
+       "updates": {
+         "url": "https://api.appdispatch.com/v1/ota/manifest/<project-uuid>",
+         "enabled": true,
+         "checkAutomatically": "ON_LOAD"
+       },
+       "runtimeVersion": {
+         "policy": "fingerprint"
+       }
+     }
+   }
+   ```
+4. **Creates `.dispatch/config.json`** with your project UUID and slug
+5. **Adds `.dispatch/` to `.gitignore`**
+
+## After init
+
+You're ready to publish your first update:
+
+```bash
+dispatch publish --channel production -m "initial release"
+```

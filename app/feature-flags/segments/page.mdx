@@ -1,0 +1,102 @@
+# Segments
+
+Segments are **reusable audience definitions** for feature flag targeting. Instead of rebuilding the same conditions on every flag, define a segment once and reference it from any number of flags.
+
+Think of segments as saved filters — "iOS Pro Users" or "Beta Testers" — that you can apply with one click when creating targeting rules.
+
+## How segments differ from inline rules
+
+| | Inline attribute rule | Segment rule |
+|---|---|---|
+| **Scope** | One flag | Reusable across flags |
+| **Conditions** | Defined on the flag | Defined once, referenced by key |
+| **Maintenance** | Edit each flag individually | Update the segment, all flags reflect the change |
+| **Use case** | One-off targeting | Shared audiences used across multiple flags |
+
+If you find yourself copying the same conditions across flags, create a segment instead.
+
+## Creating a segment
+
+In the dashboard, go to **Contexts → Segments** and click **Create Segment**.
+
+Each segment has:
+
+| Field | Description |
+|-------|-------------|
+| **Name** | Display name (e.g., "iOS Pro Users") |
+| **Key** | Auto-generated from the name (e.g., `ios-pro-users`). Used to reference the segment in rules and the API. |
+| **Description** | What this segment represents |
+| **Match logic** | **All conditions** (AND) or **Any condition** (OR) |
+| **Conditions** | One or more attribute rules |
+
+### Conditions
+
+Each condition tests a context attribute against a value:
+
+```
+platform eq "ios"
+plan in ["pro", "enterprise"]
+ota.runtime_version semver_gte "2.4.0"
+```
+
+Conditions use the same operators as [attribute rules](/feature-flags#attribute-rules):
+
+| Operator | Description |
+|----------|-------------|
+| `eq` / `neq` | Equals / not equals |
+| `in` / `not_in` | In list / not in list |
+| `contains`, `starts_with`, `ends_with` | String matching |
+| `gt`, `gte`, `lt`, `lte` | Numeric comparison |
+| `semver_gte`, `semver_lte` | Semver comparison |
+| `exists` / `not_exists` | Attribute presence (no value needed) |
+
+### Match logic
+
+- **All conditions (AND)** — Every condition must match. Use for narrow, specific audiences.
+- **Any condition (OR)** — At least one condition must match. Use for broader audiences.
+
+### OTA-aware conditions
+
+Segments can include OTA context attributes like `ota.branch`, `ota.runtime_version`, and `ota.updated_within_days`. This means a segment can define an audience like "Android devices on runtime 2.4.0+ from the canary branch" — combining user attributes with device update state in a single reusable definition.
+
+## Using segments in flag rules
+
+When adding a targeting rule to a flag, select **Segment** as the rule type and pick from the dropdown. The rule card shows:
+
+- Segment name and estimated device count
+- All conditions with match logic (AND/OR)
+- Variation picker — which value devices in this segment receive
+
+A segment rule evaluates to true when the current evaluation context matches the segment's conditions. Like all rules, it's evaluated in [priority order](/feature-flags#priority) — first match wins.
+
+### Example priority setup
+
+| Priority | Rule | Purpose |
+|----------|------|---------|
+| 0 | User list: internal team | Always see new feature |
+| 1 | OTA: runtime version ≥ 49.0.0 | Only devices with the code |
+| 2 | Segment: "iOS Pro Users" | Pro iOS users get early access |
+| 3 | Percentage rollout: 10% | Gradual rollout to everyone else |
+
+## Device estimates
+
+Each segment shows an **estimated device count** — how many currently active devices match the segment's conditions. This helps you gauge the blast radius before attaching a segment to a flag.
+
+Estimates are approximate and based on the most recent context data from active devices.
+
+## Reference tracking
+
+The segment detail view shows a **Referenced by** list — every flag that uses this segment as a targeting rule. You can't delete a segment that's still referenced by flags. Remove the segment rules from those flags first, then delete.
+
+## Segments vs. channels
+
+Both segments and channels define groups of devices, but they serve different purposes:
+
+| | Channels | Segments |
+|---|---|---|
+| **Controls** | OTA update delivery | Feature flag targeting |
+| **Grouping** | By environment (production, staging) | By user/device attributes |
+| **Mechanism** | Branch mapping + percentage rollout | Attribute conditions (AND/OR) |
+| **Scope** | Which code a device runs | Which flag values a device sees |
+
+Channels are your deployment boundaries. Segments are your targeting boundaries within a deployment.

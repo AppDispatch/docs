@@ -1,0 +1,30 @@
+/* Match the AppDispatch dashboard theme */
+:root {
+  --nextra-primary-hue: 245deg;
+  --nextra-primary-saturation: 100%;
+  --nextra-primary-lightness: 67%;
+}
+
+/* Override Nextra primary color to match dashboard purple */
+html[class~="dark"] {
+  --nextra-primary-hue: 245deg;
+  --nextra-primary-saturation: 100%;
+  --nextra-primary-lightness: 67%;
+}
+
+/* Clean body font to match dashboard */
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tighter code blocks */
+pre code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.875rem;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+}

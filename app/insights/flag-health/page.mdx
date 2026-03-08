@@ -1,0 +1,64 @@
+# Flag Health
+
+Every feature flag in AppDispatch tracks health metrics per variation, so you can see whether a specific flag value is correlated with errors or crashes.
+
+## Evaluation analytics
+
+Each flag's detail view shows evaluation data over a configurable time range (7, 14, 30, or 90 days):
+
+- **Total evaluations** — How many times the flag was evaluated in the period
+- **Last evaluated** — When the most recent evaluation occurred
+- **Per-variation breakdown** — For each variation, the evaluation count and percentage of total. Inactive variations (0 evaluations) are shown grayed out.
+- **Evaluations over time** — A daily bar chart showing evaluation volume. Drops may indicate stale clients; spikes correlate with rollout progression.
+
+## Health metrics
+
+Flag health is tracked per variation and per channel:
+
+| Metric | Description |
+|--------|-------------|
+| **Error rate** | Percentage of sessions with unhandled errors for devices seeing this variation |
+| **Error rate delta** | Change from baseline — red if increasing, green if decreasing |
+| **Crash-free** | Percentage of sessions without native crashes (highlighted red if below 99%) |
+| **Affected devices** | Number of devices contributing to the metric |
+| **Status** | `healthy`, `degraded`, or `incident` |
+
+### Per-variation health table
+
+The health panel breaks down metrics by variation and channel:
+
+| Variation | Channel | Devices | Error rate | Crash-free | Status |
+|-----------|---------|---------|-----------|-----------|--------|
+| On | production | 1,247 | 1.2% (+0.7%) | 99.1% | degraded |
+| Off | production | 3,580 | 0.5% (+0.1%) | 99.8% | healthy |
+
+This makes it immediately clear when one variation is performing worse than another. If `On` has a 1.2% error rate and `Off` has 0.5%, the flag's feature is likely the cause.
+
+### Health in the flag list
+
+The flag list view surfaces health issues without requiring you to open each flag:
+
+- Flags with degraded or incident status show a health badge in the list row
+- The badge shows the worst variation and its error rate (e.g., *"On: 1.2% errors"*)
+- Per-channel columns show 7-day evaluation counts and a stacked variation bar
+
+## Health during rollout executions
+
+When a flag is attached to a [rollout policy](/updates/rollout-policies), its health is tracked as part of the execution:
+
+- Each linked flag in the execution detail view shows its own health metrics
+- Status badges (`healthy` / `degraded` / `incident`) appear per flag
+- Error rate and crash-free percentage are shown with delta badges
+- If a flag's health degrades, you can [revert that specific flag](/updates/rollout-policies#flag-level-rollback) while keeping the update deployed
+
+This per-flag health tracking during rollouts is what enables surgical response — rather than rolling back an entire release because "something is wrong," you can see exactly which flag variation is causing the issue and revert just that one.
+
+## How metrics are collected
+
+The SDK reports flag evaluations back to AppDispatch in batches (every 60 seconds by default). Each report includes:
+
+- Which flags were evaluated
+- Which variations were returned
+- The evaluation context (device ID, channel, runtime version)
+
+AppDispatch correlates this with device-level health signals (crash reports, error rates, session duration) to produce per-variation health metrics. Because the same platform handles both updates and flags, the attribution is automatic — no integration layer or custom instrumentation needed.

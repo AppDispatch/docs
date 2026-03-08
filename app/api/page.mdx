@@ -1,0 +1,477 @@
+# API Reference
+
+All API endpoints are served under `/v1/ota/` and require authentication via an API key (passed as a Bearer token) and a project slug (passed as the `X-Project` header).
+
+```bash
+curl https://api.appdispatch.com/v1/ota/updates \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "X-Project: your-project-slug"
+```
+
+## Authentication
+
+### Headers
+
+| Header | Description |
+|--------|-------------|
+| `Authorization` | `Bearer YOUR_API_KEY` |
+| `X-Project` | Your project slug |
+
+### Getting an API key
+
+Create API keys from the dashboard under **Settings → API Keys**.
+
+---
+
+## Updates
+
+### List updates
+
+```
+GET /v1/ota/updates
+```
+
+### Create update
+
+```
+POST /v1/ota/updates
+```
+
+### Update an update
+
+```
+PATCH /v1/ota/updates/{id}
+```
+
+### Delete update
+
+```
+DELETE /v1/ota/updates/{id}
+```
+
+### Republish update
+
+```
+POST /v1/ota/updates/{id}/republish
+```
+
+### Get update history
+
+```
+GET /v1/ota/updates/{id}/history
+```
+
+---
+
+## Builds
+
+### List builds
+
+```
+GET /v1/ota/builds
+```
+
+### Upload build
+
+```
+POST /v1/ota/builds
+```
+
+Multipart form upload. Fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `runtimeVersion` | string | Yes | Runtime version fingerprint |
+| `platform` | string | Yes | `ios` or `android` |
+| `message` | string | No | Release message |
+| `expoConfig` | JSON | No | Expo app config |
+| `gitCommitHash` | string | No | Git commit hash |
+| `gitBranch` | string | No | Git branch name |
+| `assets` | files | Yes | Bundle and asset files |
+
+### Publish build
+
+```
+POST /v1/ota/builds/{id}/publish
+```
+
+```json
+{
+  "channel": "production",
+  "rolloutPercentage": 100,
+  "isCritical": false,
+  "releaseMessage": "v2.1 release",
+  "groupId": "optional-uuid"
+}
+```
+
+### Delete build
+
+```
+DELETE /v1/ota/builds/{id}
+```
+
+---
+
+## Branches
+
+### List branches
+
+```
+GET /v1/ota/branches
+```
+
+### Create branch
+
+```
+POST /v1/ota/branches
+```
+
+```json
+{
+  "name": "staging"
+}
+```
+
+### Delete branch
+
+```
+DELETE /v1/ota/branches/{name}
+```
+
+---
+
+## Channels
+
+### List channels
+
+```
+GET /v1/ota/channels
+```
+
+### Create channel
+
+```
+POST /v1/ota/channels
+```
+
+```json
+{
+  "name": "staging",
+  "branchName": "staging"
+}
+```
+
+### Update channel
+
+```
+PATCH /v1/ota/channels/{name}
+```
+
+```json
+{
+  "branchName": "new-branch",
+  "rolloutBranchName": "canary",
+  "rolloutPercentage": 10,
+  "minRuntimeVersion": "2.0.0"
+}
+```
+
+### Delete channel
+
+```
+DELETE /v1/ota/channels/{name}
+```
+
+---
+
+## Feature Flags
+
+### List flags
+
+```
+GET /v1/ota/flags
+```
+
+### Create flag
+
+```
+POST /v1/ota/flags
+```
+
+```json
+{
+  "name": "New Checkout",
+  "key": "new-checkout",
+  "flagType": "boolean",
+  "defaultValue": false,
+  "enabled": true,
+  "description": "Enable the new checkout flow"
+}
+```
+
+### Get flag
+
+```
+GET /v1/ota/flags/{id}
+```
+
+### Update flag
+
+```
+PATCH /v1/ota/flags/{id}
+```
+
+### Delete flag
+
+```
+DELETE /v1/ota/flags/{id}
+```
+
+### Create targeting rule
+
+```
+POST /v1/ota/flags/{id}/rules
+```
+
+```json
+{
+  "ruleType": "percentage_rollout",
+  "ruleConfig": {
+    "rollout": [
+      {"variationId": 1, "weight": 50},
+      {"variationId": 2, "weight": 50}
+    ]
+  },
+  "variationId": 1,
+  "priority": 0,
+  "channelName": "production"
+}
+```
+
+Rule types: `user_list`, `percentage_rollout`, `attribute`, `segment`, `ota_update`
+
+Segment rule example:
+
+```json
+{
+  "ruleType": "segment",
+  "ruleConfig": {
+    "segmentKey": "ios-pro-users"
+  },
+  "variationId": 1,
+  "priority": 2,
+  "channelName": "production"
+}
+```
+
+### Update rule
+
+```
+PATCH /v1/ota/flags/{id}/rules/{ruleId}
+```
+
+### Delete rule
+
+```
+DELETE /v1/ota/flags/{id}/rules/{ruleId}
+```
+
+### Update variation
+
+```
+PATCH /v1/ota/flags/{id}/variations/{variationId}
+```
+
+### Update environment settings
+
+```
+PATCH /v1/ota/flags/{id}/env/{channelName}
+```
+
+```json
+{
+  "enabled": true,
+  "defaultValue": "variant-a"
+}
+```
+
+### Get flag evaluations
+
+```
+GET /v1/ota/flags/{id}/evaluations
+```
+
+### Flag definitions (client endpoint)
+
+```
+GET /v1/ota/flag-definitions/{projectSlug}?channel=production
+```
+
+Public endpoint used by the OpenFeature provider. Returns enabled flags with their rules and variations for the specified channel.
+
+---
+
+## Segments
+
+### List segments
+
+```
+GET /v1/ota/segments
+```
+
+### Create segment
+
+```
+POST /v1/ota/segments
+```
+
+```json
+{
+  "name": "iOS Pro Users",
+  "key": "ios-pro-users",
+  "description": "Pro-tier users on iOS",
+  "matchType": "all",
+  "conditions": [
+    {"attribute": "platform", "operator": "eq", "values": ["ios"]},
+    {"attribute": "plan", "operator": "eq", "values": ["pro"]}
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `name` | string | Yes | Display name |
+| `key` | string | No | Unique key (auto-generated from name if omitted) |
+| `description` | string | No | Human-readable description |
+| `matchType` | string | Yes | `"all"` (AND) or `"any"` (OR) |
+| `conditions` | array | Yes | Array of condition objects |
+| `conditions[].attribute` | string | Yes | Context attribute name |
+| `conditions[].operator` | string | Yes | Comparison operator |
+| `conditions[].values` | string[] | Yes | Values to match (empty for `exists`/`not_exists`) |
+
+### Get segment
+
+```
+GET /v1/ota/segments/{id}
+```
+
+### Update segment
+
+```
+PATCH /v1/ota/segments/{id}
+```
+
+### Delete segment
+
+```
+DELETE /v1/ota/segments/{id}
+```
+
+Returns `409 Conflict` if the segment is referenced by any flag rules. Remove the segment rules first.
+
+---
+
+## Webhooks
+
+### List webhooks
+
+```
+GET /v1/ota/webhooks
+```
+
+### Create webhook
+
+```
+POST /v1/ota/webhooks
+```
+
+```json
+{
+  "url": "https://your-app.example.com/webhook",
+  "events": ["build.published", "channel.updated"],
+  "enabled": true
+}
+```
+
+### Update webhook
+
+```
+PATCH /v1/ota/webhooks/{id}
+```
+
+### Delete webhook
+
+```
+DELETE /v1/ota/webhooks/{id}
+```
+
+### Get delivery history
+
+```
+GET /v1/ota/webhooks/{id}/deliveries
+```
+
+---
+
+## Audit Log
+
+### List audit log
+
+```
+GET /v1/ota/audit-log?limit=100&before=500
+```
+
+| Param | Description |
+|-------|-------------|
+| `limit` | Max entries to return (default 200, max 200) |
+| `action` | Filter by action (e.g., `build.published`) |
+| `entity_type` | Filter by entity type (e.g., `update`, `flag`) |
+| `entity_id` | Filter by entity ID |
+| `before` | Cursor: return entries with ID less than this (for pagination) |
+
+---
+
+## Rollback
+
+### Create rollback
+
+```
+POST /v1/ota/rollback
+```
+
+```json
+{
+  "channelName": "production",
+  "platform": "ios"
+}
+```
+
+---
+
+## User Overrides
+
+### List overrides
+
+```
+GET /v1/ota/user-overrides
+```
+
+### Create override
+
+```
+POST /v1/ota/user-overrides
+```
+
+```json
+{
+  "userId": "user-123",
+  "branchName": "beta-testers"
+}
+```
+
+### Delete override
+
+```
+DELETE /v1/ota/user-overrides/{id}
+```

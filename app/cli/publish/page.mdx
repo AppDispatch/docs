@@ -1,0 +1,75 @@
+# dispatch publish
+
+Export your Expo app and publish an OTA update to AppDispatch.
+
+## Usage
+
+```bash
+dispatch publish [OPTIONS]
+```
+
+## Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--channel` | `production` | Target channel (e.g. `production`, `staging`, `canary`) |
+| `-m`, `--message` | Latest git commit | Release message |
+| `--platform` | Both | Platform to build: `ios`, `android`, or both |
+| `--rollout` | `100` | Rollout percentage (0–100) |
+| `--critical` | `false` | Force immediate reload on devices |
+| `--no-publish` | `false` | Upload the build without publishing — publish later from the dashboard |
+| `--runtime-version` | Auto-detected | Override the runtime version (skips fingerprint computation) |
+
+## Examples
+
+### Publish to production
+
+```bash
+dispatch publish
+```
+
+### Publish to staging with a message
+
+```bash
+dispatch publish --channel staging -m "fix onboarding bug"
+```
+
+### Gradual rollout
+
+```bash
+dispatch publish --rollout 10 -m "testing new checkout flow"
+```
+
+Then increase later from the dashboard, or publish again with a higher percentage.
+
+### Critical update
+
+```bash
+dispatch publish --critical -m "security patch"
+```
+
+Critical updates force an immediate reload instead of waiting for the next app launch.
+
+### iOS only
+
+```bash
+dispatch publish --platform ios -m "iOS-specific fix"
+```
+
+### Upload without publishing
+
+```bash
+dispatch publish --no-publish -m "ready for QA review"
+```
+
+The build will appear in the dashboard where it can be reviewed and published manually.
+
+## What it does
+
+1. Loads project config from `.dispatch/config.json` and credentials from `~/.dispatch/credentials.json`
+2. Computes a runtime fingerprint using `@expo/fingerprint`
+3. Runs `npx expo export` for each platform
+4. Uploads assets to AppDispatch via multipart upload
+5. Publishes the build to the target channel (unless `--no-publish`)
+
+iOS and Android builds are grouped together so they appear as a single release in the dashboard.
