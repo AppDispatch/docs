@@ -1,6 +1,6 @@
 # Adoption
 
-The Adoption dashboard shows how updates spread across your device population — which versions are running on how many devices, and how quickly new updates are adopted.
+The Adoption dashboard shows how releases spread across your device population — which versions are running on how many devices, and how quickly new releases are adopted.
 
 ## Summary metrics
 
@@ -8,9 +8,9 @@ Three top-level cards:
 
 | Metric | Description |
 |--------|-------------|
-| **Active devices** | Total devices currently tracked across all update versions |
-| **Updates tracked** | Number of distinct update versions in the field |
-| **Downloads** | Total asset downloads over the selected time range |
+| **Total Active Devices** | Total devices currently tracked across all release versions |
+| **Releases tracked** | Number of distinct release versions in the field |
+| **Downloads** | Total asset downloads over the selected time range (7, 14, 30, or 90 days) |
 
 ## Downloads over time
 
@@ -20,20 +20,22 @@ A bar chart showing daily download volume. Useful for:
 - Spotting adoption stalls (downloads plateau early)
 - Verifying rollout policy progression (downloads increase as percentage ramps up)
 
+You can adjust the time range to 7, 14, 30, or 90 days.
+
 ## Device distribution
 
-A stacked horizontal bar showing the percentage of devices on each update version, color-coded by version. Below the bar, a table breaks it down:
+A stacked horizontal bar showing the percentage of devices on each release version, color-coded by version. Below the bar, a table breaks it down:
 
 | Column | Description |
 |--------|-------------|
-| **Version** | The update version identifier |
-| **Channel** | Which channel the update was published to |
-| **Branch** | The branch the update lives on |
-| **Update ID** | Truncated update UUID for reference |
+| **Version** | The release version identifier |
+| **Channel** | Which channel the release was published to |
+| **Branch** | The branch the release lives on |
+| **Update ID** | Truncated release UUID for reference |
 | **Devices** | Number of devices on this version + percentage of total |
 
 ### What to look for
 
-- **Long tail of old versions** — Devices not updating. Check if they're below the channel's minimum runtime version or if the update is gated behind a rollout percentage.
-- **Rapid convergence** — A new update quickly dominates. Expected for critical updates or 100% rollouts.
+- **Long tail of old versions** — Devices not updating. Check if they're below the channel's minimum runtime version or if the release is gated behind a rollout percentage.
+- **Rapid convergence** — A new release quickly dominates. Expected for critical releases or 100% rollouts.
 - **Split distribution** — Devices evenly split between two versions. Normal during a rollout policy execution (e.g., 25% on new, 75% on old).

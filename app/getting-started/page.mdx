@@ -19,7 +19,7 @@ curl -sL https://github.com/AppDispatch/cli/releases/latest/download/dispatch-da
 ## 2. Log in
 
 ```bash
-dispatch login --key YOUR_API_KEY
+dispatch login --server https://api.appdispatch.com --key YOUR_API_KEY
 ```
 
 ## 3. Initialize your project
@@ -71,7 +71,7 @@ export default function RootLayout() {
 - `useOTAUpdates()` — Checks for updates on launch, generates a stable device ID for rollout bucketing, and applies critical updates immediately. No-ops in `__DEV__` mode.
 - `AppDispatchProvider` — Wraps your app with the OpenFeature context and starts health monitoring
 
-## 6. Publish your first update
+## 6. Publish your first release
 
 ```bash
 dispatch publish -m "Initial release"
@@ -88,7 +88,7 @@ flowchart LR
   A[Your Expo App] -->|expo export| B[Bundle + Assets]
   B -->|dispatch publish| C[AppDispatch]
   C -->|manifest request| D[Device]
-  D -->|downloads changed assets| E[Update Applied]
+  D -->|downloads changed assets| E[Release Applied]
 ```
 
 1. `dispatch publish` exported your app and uploaded the bundle

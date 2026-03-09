@@ -7,19 +7,19 @@ flowchart LR
   S1["Stage 1\n5%"] -->|"30 min, crash < 2%"| S2["Stage 2\n25%"]
   S2 -->|"60 min, crash < 1%"| S3["Stage 3\n50%"]
   S3 -->|"120 min, crash < 0.5%"| S4["Stage 4\n100%"]
-  S2 -.->|"crash ≥ 2%"| RB["Rollback"]
+  S2 -.->|"crash ≥ 2%"| RB["Auto-rollback"]
 ```
 
 ## How it works
 
 A rollout policy is a reusable template of **stages**. Each stage defines:
 
-- **Target percentage** — What percentage of devices receive the update at this stage
+- **Target percentage** — What percentage of devices receive the release at this stage
 - **Wait time** — How long to observe before advancing
-- **Minimum devices** — How many devices must receive the update before the stage is considered valid
+- **Minimum devices** — How many devices must receive the release before the stage is considered valid
 - **Thresholds** — Health metrics that must stay within bounds
 
-When you publish an update and attach a policy, AppDispatch creates an **execution** — a live instance of the policy running against that update. The execution advances through stages automatically when conditions are met, and halts or rolls back if they aren't.
+When you publish a release and attach a policy, AppDispatch creates an **execution** — a live instance of the policy running against that release. The execution advances through stages automatically when conditions are met, and halts or rolls back if they aren't.
 
 ## Stages
 
@@ -27,7 +27,7 @@ Stages run in order. Each stage holds at its target percentage until all advance
 
 | Condition | Purpose |
 |-----------|---------|
-| Wait time elapsed | Give the update time to soak |
+| Wait time elapsed | Give the release time to soak |
 | Minimum devices reached | Ensure enough data points for meaningful metrics |
 | All thresholds passing | Health metrics are within acceptable bounds |
 
@@ -42,7 +42,7 @@ Once all conditions pass, the execution advances to the next stage. When the fin
 | 3 | 50% | 120 min | 2,000 | Crash rate < 0.5%, JS error rate < 1% |
 | 4 | 100% | — | — | — |
 
-The final stage typically has no thresholds — by the time you've passed through 50% of devices, the update is proven safe.
+The final stage typically has no thresholds — by the time you've passed through 50% of devices, the release is proven safe.
 
 ## Thresholds
 
@@ -58,39 +58,39 @@ Each threshold monitors a health metric and defines what happens if the metric i
 | Action | Behavior |
 |--------|----------|
 | **Gate** | Prevent advancement to the next stage. The rollout stays at its current percentage until the metric recovers. |
-| **Rollback** | Trigger a [bundle-level rollback](#bundle-level-rollback) — revert the update and all release flag overrides. Devices receive the previous update and flags return to global state. |
+| **Auto-rollback** | Trigger a [bundle-level rollback](#bundle-level-rollback) — revert the release and all linked flag overrides. Devices receive the previous release and flags return to their pre-release state. |
 
-A threshold configured as a gate gives you time to investigate before things get worse. A threshold configured as a rollback acts as an automated safety net.
+A threshold configured as a gate gives you time to investigate before things get worse. A threshold configured as an auto-rollback acts as an automated safety net.
 
-## Release flags
+## Linked flags
 
-When publishing an update, you can attach **release flags** — feature flags whose state is scoped to the release rather than toggled globally. The rollout policy controls both the update delivery **and** the flag state for the devices it reaches.
+When publishing a release, you can attach **linked feature flags** — flags whose state is scoped to the release rather than toggled globally. The rollout policy controls both the release delivery **and** the flag state for the devices it reaches.
 
-This is the key distinction: release flags are not global toggles. A flag configured in a release is only active for devices that received that release. Everyone else sees the global flag state.
+This is the key distinction: linked flags are not global toggles. A flag linked to a release is only active for devices that received that release. Everyone else sees the default flag state.
 
 ```mermaid
 flowchart TD
   U["Release: v49 + new-checkout = on"] --> P["Policy: 5% → 25% → 50% → 100%"]
   P --> S1["Stage 1: 5% get v49"]
   S1 --> F1["5% → new-checkout = true"]
-  S1 --> G1["95% → new-checkout = global state"]
+  S1 --> G1["95% → new-checkout = default state"]
   S1 -->|"health checks pass"| S2["Stage 2: 25% get v49"]
   S2 --> F2["25% → new-checkout = true"]
-  S2 --> G2["75% → new-checkout = global state"]
+  S2 --> G2["75% → new-checkout = default state"]
 ```
 
 ### How evaluation works
 
-When a device evaluates a flag, AppDispatch checks if the device is on a release that configures that flag. Release overrides take precedence over global flag state:
+When a device evaluates a flag, AppDispatch checks if the device is on a release that configures that flag. Linked flag overrides take precedence over the default flag state:
 
-1. Is the device on a release that configures this flag? → Return the release's target value
-2. Otherwise → Evaluate normal global flag rules
+1. Is the device on a release that links this flag? → Return the release's target value
+2. Otherwise → Evaluate normal flag rules
 
-This means the release owns the state of that flag for its audience, regardless of the global configuration.
+This means the release owns the state of that flag for its audience, regardless of the default configuration.
 
 ### All flag types
 
-Release flags work with every flag type, not just booleans:
+Linked flags work with every flag type, not just booleans:
 
 | Flag type | What you configure | Example |
 |-----------|-------------------|---------|
@@ -101,7 +101,7 @@ Release flags work with every flag type, not just booleans:
 
 For boolean flags, you toggle between Enable and Disable. For string, number, and JSON flags, you pick from the flag's defined [variations](/feature-flags#variations) — for example, choosing "Single Page" from a checkout layout flag with variations like "Single Page", "Multi Step", and "Accordion".
 
-### Release → global handoff
+### Release-to-global handoff
 
 The release handles the **deployment phase** — getting the code onto devices with a specific flag state. Once the rollout completes, flag management moves to the normal [Feature Flags](/feature-flags) workflow.
 
@@ -109,31 +109,31 @@ For example, using a string flag with lifecycle variations (`off`, `shadow`, `li
 
 1. Create flag `new-payment-engine` as a string type with variations: `off`, `shadow`, `live`, `complete`. Default: `off`
 2. Ship a release with `new-payment-engine` → `shadow` and a rollout policy (5% → 25% → 100%)
-3. As the rollout progresses, devices in each stage get the update **and** shadow mode — the new payment engine runs in the background, logging results against the old engine
+3. As the rollout progresses, devices in each stage get the release **and** shadow mode — the new payment engine runs in the background, logging results against the old engine
 4. Release hits 100% — every device has the code + shadow. The release's job is done
-5. Go to Feature Flags, update the global value: `shadow` → `live` (new engine serves real results). Monitor. Then `live` → `complete` (remove old code path). Eventually clean up the flag
+5. Go to Feature Flags, update the default value: `shadow` → `live` (new engine serves real results). Monitor. Then `live` → `complete` (remove old code path). Eventually clean up the flag
 
 The release is responsible for atomic deploy + initial activation. Everything after that is the flag's own lifecycle, managed through the Feature Flags UI.
 
 ### Graduated rollback
 
-Because release flags tie flag state to the update, rollback isn't binary — you get three levels of response, from surgical to nuclear:
+Because linked flags tie flag state to the release, rollback isn't binary — you get three levels of response, from surgical to nuclear:
 
 #### Flag-level rollback
 
-Revert a single flag override while keeping the update deployed. Devices fall back to the global flag state for that flag only.
+Revert a single flag override while keeping the release deployed. Devices fall back to the pre-release flag state for that flag only.
 
-Use this when a specific feature is causing issues but the rest of the update is fine. For example, if `new-checkout` is spiking errors but `redesigned-profile` is healthy, revert just `new-checkout` and keep everything else live.
+Use this when a specific feature is causing issues but the rest of the release is fine. For example, if `new-checkout` is spiking errors but `redesigned-profile` is healthy, revert just `new-checkout` and keep everything else live.
 
 #### Bundle-level rollback
 
-Revert the entire update and remove all flag overrides. Devices receive the previous update, and all release-scoped flags return to their global state.
+Revert the entire release and remove all linked flag overrides. Devices receive the previous release, and all linked flags return to their pre-release state.
 
-This is the standard rollback — equivalent to "undo this release." Automated threshold rollbacks use this level.
+This is the standard rollback — equivalent to "undo this release." Automated threshold auto-rollbacks use this level.
 
 #### Channel-level rollback
 
-Revert **all active releases** on a channel. Every device on the channel receives the last stable update, and all flag overrides across all releases are removed.
+Revert **all active releases** on a channel. Every device on the channel receives the last stable release, and all linked flag overrides across all releases are removed.
 
 This is the nuclear option for when multiple releases have compounding issues. It affects all users on the channel.
 
@@ -141,20 +141,20 @@ This is the nuclear option for when multiple releases have compounding issues. I
 flowchart TD
   I["Issue detected"] --> D{"Severity?"}
   D -->|"One feature broken"| F["Flag-level\nRevert one flag override"]
-  D -->|"Release is bad"| B["Bundle-level\nRevert update + all flags"]
+  D -->|"Release is bad"| B["Bundle-level\nRevert release + all flags"]
   D -->|"Channel is unstable"| C["Channel-level\nRevert everything"]
-  F --> R1["Update stays deployed\nOne flag returns to global state"]
-  B --> R2["Devices get previous update\nAll flags return to global state"]
-  C --> R3["All devices get last stable update\nAll overrides removed"]
+  F --> R1["Release stays deployed\nOne flag returns to pre-release state"]
+  B --> R2["Devices get previous release\nAll flags return to pre-release state"]
+  C --> R3["All devices get last stable release\nAll overrides removed"]
 ```
 
 Each level has a confirmation dialog explaining the blast radius before you commit.
 
 ### Conflict warnings
 
-The dashboard warns you when a release flag configuration conflicts with global state:
+The dashboard warns you when a linked flag configuration conflicts with the default state:
 
-- **Redundant override** — A boolean flag is already globally on (or off) and the release override matches. The override has no additional effect. *"Already enabled for all users — this override has no additional effect."*
+- **Redundant override** — A boolean flag is already enabled (or disabled) globally and the release override matches. The override has no additional effect. *"Already enabled for all users — this override has no additional effect."*
 - **Partial rollout conflict** — A flag is already rolling out to some percentage of users globally. The release override takes precedence for devices in the release rollout, which may cause unexpected overlap. *"This flag is already rolling out to 25% of users. The release override will take precedence for devices in this rollout."*
 
 For non-boolean flags, redundancy checks are skipped since you're picking a specific variation value that may differ from the global default.
@@ -164,24 +164,24 @@ The typical flow avoids conflicts entirely:
 1. Create the flag — leave it globally **off** (or at its default variation)
 2. Ship a release with the flag set to the desired value and a rollout policy
 3. As the policy progresses, more devices get the flag via the release
-4. At 100%, update the global state to match and remove the flag from future releases
+4. At 100%, update the default flag value to match and remove the flag from future releases
 
-### Adding flags to a release
+### Linking flags to a release
 
-In the publish flow, after selecting a channel and rollout policy, search and attach feature flags. For each flag:
+In the publish flow, after selecting a channel and rollout policy, search and link feature flags. For each flag:
 
 - **Boolean flags** show an Enable/Disable toggle
 - **String, number, and JSON flags** show a dropdown of the flag's variations
 
-The same device identity that determines the rollout bucket also determines the flag state, so bucketing is consistent across updates and flags.
+The same device identity that determines the rollout bucket also determines the flag state, so bucketing is consistent across releases and flags.
 
 ## Executions
 
-An execution is a live rollout in progress. Each execution tracks:
+An execution is a live rollout in progress. The execution detail view streams updates in real time via Server-Sent Events (SSE), so stage transitions, metric changes, and auto-rollbacks appear instantly without refreshing. Each execution tracks:
 
 - **Current stage and percentage** — Where the rollout is right now
 - **Health metrics** — Live crash rate, JS error rate, app launches, unique devices
-- **Release flags** — Which flags are scoped to this release and their target state
+- **Linked flags** — Which flags are linked to this release and their target state
 - **Audit log** — Every stage transition, pause, resume, and rollback with timestamps and reasons
 
 ### Execution statuses
@@ -191,7 +191,7 @@ An execution is a live rollout in progress. Each execution tracks:
 | **Active** | Rollout is progressing through stages |
 | **Paused** | Manually paused — won't advance until resumed |
 | **Completed** | Reached 100% and all thresholds passed |
-| **Rolled back** | A threshold violation triggered an automatic rollback |
+| **Rolled back** | A threshold violation triggered an auto-rollback |
 | **Cancelled** | Manually cancelled before completion |
 
 ### Manual controls
@@ -201,8 +201,8 @@ Even with automated policies, you retain full control:
 - **Pause** — Freeze at the current percentage while you investigate
 - **Resume** — Continue advancing through stages
 - **Advance** — Skip to the next stage (overrides wait time and thresholds)
-- **Revert flag** — Remove a single flag override, keeping the update deployed
-- **Roll back release** — Revert the update and all flag overrides
+- **Revert flag** — Remove a single linked flag override, keeping the release deployed
+- **Roll back release** — Revert the release and all linked flag overrides
 - **Roll back channel** — Revert all active releases on the channel
 
 ## Creating a policy
@@ -213,7 +213,11 @@ Policies are created from **Rollouts → Policies** in the dashboard. Define:
 2. **Channel** — Which channel this policy applies to
 3. **Stages** — Add stages with target percentages, wait times, and thresholds
 
-Policies are reusable — create one policy per risk profile and apply it to any update.
+Policies are reusable — create one policy per risk profile and apply it to any release.
+
+Each policy has an **active/inactive toggle**. Inactive policies are hidden from the publish flow but remain available for re-activation.
+
+You can **edit** or **delete** policies from the policy detail view. Editing is locked while an execution is running against the policy — pause or complete the execution first. Deleting a policy does not affect already-completed executions.
 
 ### Common policy patterns
 
@@ -243,20 +247,20 @@ Policies are reusable — create one policy per risk profile and apply it to any
 | 4 | 50% | 360 min | 10,000 |
 | 5 | 100% | — | — |
 
-## Rollout policies + release flags + channels
+## Rollout policies + linked flags + channels
 
 These three systems work together:
 
 1. **[Channels](/updates/channels)** route devices to branches and handle deterministic bucketing
-2. **[Feature flags](/feature-flags)** control feature visibility — globally or scoped to a release
+2. **[Feature flags](/feature-flags)** control feature visibility — globally or linked to a release
 3. **Rollout policies** automate the progression and tie everything together
 
 A typical workflow for a major feature launch:
 
 1. Create a feature flag `new_checkout` — leave it globally **off**
-2. Ship the code behind the flag in an update
+2. Ship the code behind the flag in a build
 3. Publish a new release with `new_checkout` → **Enable** and the "Safe Production Rollout" policy
-4. Stage 1: 5% of devices get the update and `new_checkout = true`. The other 95% stay on the previous version with `new_checkout = false`
-5. Health checks pass → Stage 2: 25% now have the update and the flag on
-6. If crashes spike, the update rolls back — devices leave the release group and `new_checkout` falls back to its global state (off)
-7. At 100%, all devices have the flag via the release. Optionally flip the global state to **on** and remove the flag from future releases
+4. Stage 1: 5% of devices get the release and `new_checkout = true`. The other 95% stay on the previous version with `new_checkout = false`
+5. Health checks pass → Stage 2: 25% now have the release and the flag on
+6. If crashes spike, the release rolls back — devices leave the release group and `new_checkout` falls back to its pre-release state (off)
+7. At 100%, all devices have the flag via the release. Optionally flip the default value to **on** and remove the flag from future releases

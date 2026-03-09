@@ -55,6 +55,22 @@ DELETE /v1/ota/updates/{id}
 POST /v1/ota/updates/{id}/republish
 ```
 
+Republishes an existing update to additional channels or with updated release notes.
+
+```json
+{
+  "channels": ["staging", "canary"],
+  "releaseMessage": "Republished with fix"
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `channels` | string[] | No | Channels to publish to |
+| `releaseMessage` | string | No | Updated release message |
+
+Returns `{ "updates": [...], "groupId": "uuid" }`.
+
 ### Get update history
 
 ```
@@ -91,6 +107,8 @@ Multipart form upload. Fields:
 
 ### Publish build
 
+Publishes a build to a channel, creating an update (release).
+
 ```
 POST /v1/ota/builds/{id}/publish
 ```
@@ -101,9 +119,23 @@ POST /v1/ota/builds/{id}/publish
   "rolloutPercentage": 100,
   "isCritical": false,
   "releaseMessage": "v2.1 release",
-  "groupId": "optional-uuid"
+  "groupId": "optional-uuid",
+  "linkedFlags": [
+    { "flagId": 1, "enabled": true }
+  ]
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `channel` | string | Yes | Target channel name |
+| `rolloutPercentage` | number | No | Initial rollout percentage (0–100, default 100) |
+| `isCritical` | boolean | No | Mark update as critical |
+| `releaseMessage` | string | No | Release notes |
+| `groupId` | string | No | UUID to group multi-platform publishes together |
+| `linkedFlags` | array | No | Feature flags to link to this release |
+| `linkedFlags[].flagId` | number | Yes | Flag ID |
+| `linkedFlags[].enabled` | boolean | Yes | Whether the flag is enabled for this release |
 
 ### Delete build
 
@@ -206,7 +238,11 @@ POST /v1/ota/flags
   "flagType": "boolean",
   "defaultValue": false,
   "enabled": true,
-  "description": "Enable the new checkout flow"
+  "description": "Enable the new checkout flow",
+  "variations": [
+    { "name": "On", "value": "true" },
+    { "name": "Off", "value": "false" }
+  ]
 }
 ```
 
@@ -239,11 +275,11 @@ POST /v1/ota/flags/{id}/rules
   "ruleType": "percentage_rollout",
   "ruleConfig": {
     "rollout": [
-      {"variationId": 1, "weight": 50},
-      {"variationId": 2, "weight": 50}
+      {"variantValue": "true", "weight": 50},
+      {"variantValue": "false", "weight": 50}
     ]
   },
-  "variationId": 1,
+  "variantValue": "true",
   "priority": 0,
   "channelName": "production"
 }
@@ -259,7 +295,7 @@ Segment rule example:
   "ruleConfig": {
     "segmentKey": "ios-pro-users"
   },
-  "variationId": 1,
+  "variantValue": "true",
   "priority": 2,
   "channelName": "production"
 }
@@ -388,8 +424,8 @@ POST /v1/ota/segments
   "description": "Pro-tier users on iOS",
   "matchType": "all",
   "conditions": [
-    {"attribute": "platform", "operator": "eq", "values": ["ios"]},
-    {"attribute": "plan", "operator": "eq", "values": ["pro"]}
+    {"attribute": "platform", "operator": "eq", "valuesJson": ["ios"]},
+    {"attribute": "plan", "operator": "eq", "valuesJson": ["pro"]}
   ]
 }
 ```
@@ -403,7 +439,7 @@ POST /v1/ota/segments
 | `conditions` | array | Yes | Array of condition objects |
 | `conditions[].attribute` | string | Yes | Context attribute name |
 | `conditions[].operator` | string | Yes | Comparison operator |
-| `conditions[].values` | string[] | Yes | Values to match (empty for `exists`/`not_exists`) |
+| `conditions[].valuesJson` | string[] | Yes | Values to match (empty for `exists`/`not_exists`) |
 
 ### Get segment
 
@@ -445,7 +481,7 @@ POST /v1/ota/webhooks
 {
   "url": "https://your-app.example.com/webhook",
   "events": ["build.published", "channel.updated"],
-  "enabled": true
+  "secret": "whsec_your_signing_secret"
 }
 ```
 
@@ -453,6 +489,14 @@ POST /v1/ota/webhooks
 
 ```
 PATCH /v1/ota/webhooks/{id}
+```
+
+Use `isActive` to enable or disable a webhook:
+
+```json
+{
+  "isActive": false
+}
 ```
 
 ### Delete webhook
@@ -497,10 +541,19 @@ POST /v1/ota/rollback
 
 ```json
 {
-  "channelName": "production",
-  "platform": "ios"
+  "runtimeVersion": "1.0.0",
+  "platform": "ios",
+  "channel": "production",
+  "rollbackToUpdateId": 123
 }
 ```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `runtimeVersion` | string | Yes | Runtime version to target |
+| `platform` | string | Yes | `"ios"` or `"android"` |
+| `channel` | string | Yes | Channel name |
+| `rollbackToUpdateId` | number | No | Specific update ID to roll back to. If omitted, rolls back to the embedded update. |
 
 ---
 
@@ -521,7 +574,8 @@ POST /v1/ota/user-overrides
 ```json
 {
   "userId": "user-123",
-  "branchName": "beta-testers"
+  "branchName": "beta-testers",
+  "note": "QA tester for v2.1"
 }
 ```
 
@@ -530,3 +584,218 @@ POST /v1/ota/user-overrides
 ```
 DELETE /v1/ota/user-overrides/{id}
 ```
+
+---
+
+## Contexts
+
+### List contexts
+
+```
+GET /v1/ota/contexts
+```
+
+Returns all contexts for the project. Supports query parameters for filtering by `kind` and search.
+
+### Create context
+
+```
+POST /v1/ota/contexts
+```
+
+```json
+{
+  "kind": "user",
+  "targetingKey": "user-abc-123",
+  "name": "Alice",
+  "attributes": {
+    "plan": "pro",
+    "platform": "ios"
+  }
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `kind` | string | Yes | Context kind: `user`, `device`, `organization`, `service`, or `environment` |
+| `targetingKey` | string | Yes | Unique key for this context |
+| `name` | string | No | Display name |
+| `attributes` | object | No | Key-value attributes |
+
+### Get context
+
+```
+GET /v1/ota/contexts/{id}
+```
+
+### Delete context
+
+```
+DELETE /v1/ota/contexts/{id}
+```
+
+### List context kinds
+
+```
+GET /v1/ota/contexts/kinds
+```
+
+Returns the available context kinds: `user`, `device`, `organization`, `service`, `environment`.
+
+---
+
+## Rollout Policies
+
+### List rollout policies
+
+```
+GET /v1/ota/rollout-policies
+```
+
+### Create rollout policy
+
+```
+POST /v1/ota/rollout-policies
+```
+
+```json
+{
+  "name": "Staged production rollout",
+  "stages": [
+    { "percentage": 5, "minDevices": 100, "minDurationMinutes": 60 },
+    { "percentage": 25, "minDevices": 500, "minDurationMinutes": 120 },
+    { "percentage": 100, "minDevices": 0, "minDurationMinutes": 0 }
+  ],
+  "thresholds": {
+    "errorRate": 2.0,
+    "crashRate": 0.5,
+    "action": "auto-rollback"
+  }
+}
+```
+
+### Get rollout policy
+
+```
+GET /v1/ota/rollout-policies/{id}
+```
+
+### Update rollout policy
+
+```
+PATCH /v1/ota/rollout-policies/{id}
+```
+
+Editing is locked while an execution is running for this policy.
+
+### Delete rollout policy
+
+```
+DELETE /v1/ota/rollout-policies/{id}
+```
+
+---
+
+## Rollout Executions
+
+### List executions
+
+```
+GET /v1/ota/rollout-executions
+```
+
+### Get execution
+
+```
+GET /v1/ota/rollout-executions/{id}
+```
+
+### Pause execution
+
+```
+POST /v1/ota/rollout-executions/{id}/pause
+```
+
+### Resume execution
+
+```
+POST /v1/ota/rollout-executions/{id}/resume
+```
+
+### Cancel execution
+
+```
+POST /v1/ota/rollout-executions/{id}/cancel
+```
+
+### Advance execution
+
+```
+POST /v1/ota/rollout-executions/{id}/advance
+```
+
+Manually advances the execution to the next stage.
+
+---
+
+## Flag Health
+
+### Get flag health
+
+```
+GET /v1/ota/flags/{id}/health
+```
+
+Returns health status for a flag, including error rate, crash-free percentage, affected devices, and per-variation health breakdown.
+
+---
+
+## Adoption
+
+### Get adoption metrics
+
+```
+GET /v1/ota/insights/adoption
+```
+
+Returns adoption metrics including total active devices and download counts. Supports `days` query parameter (7, 14, 30, or 90).
+
+---
+
+## Telemetry
+
+### Get timeseries data
+
+```
+GET /v1/ota/telemetry/timeseries
+```
+
+Returns time-bucketed metrics for devices, errors, and crashes over the specified period.
+
+### Get flag impacts
+
+```
+GET /v1/ota/telemetry/flag-impacts
+```
+
+Returns the flag impact matrix showing error rate and crash-free percentage per flag variation, update, and channel.
+
+### Get telemetry events
+
+```
+GET /v1/ota/telemetry/events
+```
+
+Returns raw telemetry events with filtering by type, channel, and platform.
+
+---
+
+## Observe
+
+### List observe events
+
+```
+GET /v1/ota/observe/events
+```
+
+Returns errors, crashes, and custom events from devices. Supports filtering by event type (`js_error`, `crash`, `custom`), channel, and platform. Results are paginated (50 per page).

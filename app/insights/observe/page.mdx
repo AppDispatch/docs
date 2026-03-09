@@ -1,0 +1,77 @@
+# Observe
+
+The Observe dashboard is a real-time event viewer for errors, crashes, and custom events reported by your devices. It surfaces problems as they happen so you can triage issues without leaving AppDispatch.
+
+Events are sent by the `@appdispatch/react-native` health reporter running on each device. See [Health Reporter setup](/feature-flags/health-reporter) for installation and configuration.
+
+## Summary cards
+
+Three top-level cards:
+
+| Metric | Description |
+|--------|-------------|
+| **Errors** | Total JavaScript errors received |
+| **Crashes** | Total fatal crashes received |
+| **Custom Events** | Total custom events sent by your app |
+
+## Tabs
+
+Four tabs filter the event list by type:
+
+| Tab | Shows |
+|-----|-------|
+| **All** | Every event except internal `app_launch` events |
+| **Errors** | Non-fatal JavaScript errors (`js_error`) |
+| **Crashes** | Fatal crashes (`crash`) |
+| **Events** | Custom events sent from your app code |
+
+## Filtering
+
+- **Search** — Free-text search across event messages and names.
+- **Channel** — Filter by deployment channel: production, staging, or canary.
+- **Platform** — Filter by platform: iOS or Android.
+
+## Event list
+
+Each row in the list shows:
+
+| Field | Description |
+|-------|-------------|
+| **Message** | The event or error message |
+| **Event name** | Identifier for the event type |
+| **Fatal badge** | Shown when the event is a fatal crash |
+| **Error name** | Badge with the error class name (e.g., `TypeError`) |
+| **Count** | Number of occurrences of this event |
+| **Timestamp** | When the event was received |
+| **Platform** | iOS or Android |
+| **Channel** | The channel the device is running on |
+| **Device ID** | The reporting device's identifier |
+| **Flag count** | Number of feature flags active on the device at the time of the event |
+
+Rows include a collapsed stack trace preview (first two lines) when available.
+
+## Event detail view
+
+Expanding an event shows the full detail panel:
+
+- **Full timestamp** — Exact time the event was received.
+- **Platform and channel** — Which platform and deployment channel.
+- **Runtime version** — The runtime version running on the device.
+- **Device ID** — The reporting device.
+- **Fatal / error badges** — Crash severity and error class at a glance.
+- **Occurrence count** — How many times this event has been seen.
+- **Full stack trace** — The complete JavaScript stack trace.
+- **Component stack** — React component hierarchy at the time of the error, when available.
+- **Tags** — Key-value metadata attached to the event.
+- **Flag states** — Key-value snapshot of every feature flag value on the device when the event occurred. Useful for correlating errors with flag rollouts.
+- **Release UUID** — The release identifier the device was running.
+
+## Pagination
+
+Results are paginated at 50 events per page.
+
+## How events are collected
+
+Observe relies on the health reporter SDK (`@appdispatch/react-native`) running on each device. The SDK automatically captures JavaScript errors and crashes, and exposes an API for sending custom events. All events are tagged with the device's current channel, platform, runtime version, and active flag states.
+
+For setup instructions, see [Health Reporter](/feature-flags/health-reporter).

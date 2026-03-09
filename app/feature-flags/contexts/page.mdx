@@ -1,0 +1,91 @@
+# Contexts
+
+Contexts represent the **devices, users, and other entities** that evaluate your feature flags. Every time an SDK evaluates a flag, it reports the evaluation context — who or what requested the flag value, along with any attributes attached to that entity.
+
+The Contexts dashboard gives you visibility into every entity that has interacted with your flags: what they evaluated, when, and which variations they received.
+
+## Context kinds
+
+Each context has a **kind** that describes the type of entity it represents:
+
+| Kind | Description |
+|------|-------------|
+| **user** | An individual user of your application |
+| **device** | A specific device (phone, tablet, browser instance) |
+| **organization** | A company, team, or account that groups multiple users |
+| **service** | A backend service or microservice evaluating flags server-side |
+| **environment** | A deployment environment (production, staging, development) |
+
+The kind determines how the context icon appears in the dashboard (each kind has a distinct color-coded icon) and lets you filter the contexts list.
+
+## How contexts are created
+
+Contexts are created **automatically** when your SDK evaluates flags. When you call `OpenFeature.setContext()` and flags are evaluated, the SDK reports the evaluation context back to AppDispatch. No manual setup is needed — as soon as devices start evaluating flags, their contexts appear in the dashboard.
+
+For SDK setup details, see [Setting evaluation context](/feature-flags/sdk#setting-evaluation-context). For how evaluations are reported, see [OpenFeature integration](/feature-flags/openfeature).
+
+You can also [create contexts manually](#creating-contexts-manually) from the dashboard.
+
+## Contexts list view
+
+The contexts list shows all known evaluation contexts with:
+
+| Column | Description |
+|--------|-------------|
+| **Kind icon** | Color-coded icon indicating the context kind |
+| **Targeting key** | The unique identifier for this context within its kind |
+| **Kind badge** | Label showing user, device, organization, service, or environment |
+| **Name** | Optional display name |
+| **Attribute chips** | Up to 3 attribute key-value pairs displayed inline, with an overflow indicator if more exist |
+| **Evaluation count** | Total number of flag evaluations for this context |
+| **Last seen** | When this context last evaluated a flag |
+
+Results are paginated at 50 contexts per page.
+
+### Filtering
+
+- **Search** — Filter by targeting key, name, or attribute value.
+- **Kind filter** — Dropdown to show only contexts of a specific kind.
+
+## Context detail view
+
+Click any context to open its detail dialog. The detail view shows:
+
+**Summary**
+
+- Targeting key, kind, and name
+- Total evaluations, first seen, and last seen timestamps
+
+**Attributes table**
+
+All attributes reported by the SDK for this context, displayed as key-value pairs.
+
+**Flag evaluation history**
+
+A per-flag breakdown of every flag this context has evaluated:
+
+| Column | Description |
+|--------|-------------|
+| **Flag name** | Display name of the flag |
+| **Key** | The flag key |
+| **Channel** | Which channel the evaluation occurred in |
+| **Variation** | The variation value the context received |
+| **Eval count** | Number of times this context evaluated this flag |
+| **Last evaluated** | When the most recent evaluation occurred |
+
+## Creating contexts manually
+
+While contexts are typically created automatically via SDK evaluations, you can create them manually from the dashboard. Click **Create Context** and fill in:
+
+| Field | Description |
+|-------|-------------|
+| **Kind** | Select from a visual grid of the 5 context kinds |
+| **Targeting key** | Unique identifier for this context |
+| **Name** | Optional display name |
+| **Attributes** | Dynamic key-value pairs — add as many as needed |
+
+Manually created contexts are useful for testing flag targeting rules before devices start reporting in.
+
+## Deleting contexts
+
+To delete a context, click the delete button on the context row or in the detail view. Deleting a context **removes all evaluation history** for that entity. This action cannot be undone.

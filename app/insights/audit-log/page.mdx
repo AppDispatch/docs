@@ -1,0 +1,102 @@
+# Audit Log
+
+The Audit Log records every change made across your project — who did what, when, and to which resource. Use it to track deployments, investigate configuration changes, or review teammate activity.
+
+## Category filters
+
+Filter entries by resource type using the tab bar:
+
+- **All** — Every action across the project
+- **Releases** — Release creation, patching, republishing, rollbacks, and deletion
+- **Builds** — Build uploads, publishing, and deletion
+- **Branches** — Branch creation and deletion
+- **Channels** — Channel creation, updates, and deletion
+- **Flags** — Flag, rule, variation, and environment setting changes
+- **Webhooks** — Webhook creation, updates, and deletion
+
+## Search
+
+The search bar matches against action labels, actor names, entity types, and detail values. Useful for finding all actions by a specific user or all changes to a particular flag.
+
+## Tracked actions
+
+Twenty-three action types, grouped by category:
+
+### Builds
+
+| Action | Description |
+|--------|-------------|
+| `build.uploaded` | A new build was uploaded (typically from CI/CD) |
+| `build.published` | A build was published to a channel as a release |
+| `build.deleted` | A build was removed |
+
+### Releases
+
+| Action | Description |
+|--------|-------------|
+| `update.created` | A new release was created |
+| `update.patched` | A release was modified (rollout percentage, critical flag, etc.) |
+| `update.republished` | A release was republished to additional channels |
+| `update.deleted` | A release was removed |
+| `update.rollback` | A release was rolled back |
+
+### Branches
+
+| Action | Description |
+|--------|-------------|
+| `branch.created` | A new branch was created |
+| `branch.deleted` | A branch was removed |
+
+### Channels
+
+| Action | Description |
+|--------|-------------|
+| `channel.created` | A new channel was created |
+| `channel.updated` | A channel's configuration was changed |
+| `channel.deleted` | A channel was removed |
+
+### Webhooks
+
+| Action | Description |
+|--------|-------------|
+| `webhook.created` | A new webhook was registered |
+| `webhook.updated` | A webhook's URL, events, or status was changed |
+| `webhook.deleted` | A webhook was removed |
+
+### Flags
+
+| Action | Description |
+|--------|-------------|
+| `flag.created` | A new feature flag was created |
+| `flag.updated` | A flag's configuration was changed |
+| `flag.deleted` | A flag was removed |
+| `flag.toggled` | A flag was enabled or disabled |
+| `rule.created` | A targeting rule was added to a flag |
+| `rule.updated` | A targeting rule was modified |
+| `rule.deleted` | A targeting rule was removed |
+| `env_setting.updated` | A per-environment flag setting was changed |
+| `variation.updated` | A flag variation value was modified |
+
+## Entry details
+
+Each audit log entry includes:
+
+| Field | Description |
+|--------|-------------|
+| **Action** | The action type (e.g., `build.published`) |
+| **Actor** | The user or API key that performed the action, shown with distinct icons for each |
+| **Entity** | The resource type and ID that was affected |
+| **Details** | Key-value pairs with specifics about the change |
+| **Timestamp** | When the action occurred |
+
+## Date grouping
+
+Entries are grouped by date with sticky headers. Recent dates display as **Today**, **Yesterday**, or the weekday name (e.g., **Wednesday**). Older dates use a standard date format.
+
+## Pagination
+
+Results load in pages of 100 entries. Use the **Load more** button at the bottom to fetch the next page (cursor-based pagination).
+
+## API access
+
+You can query the audit log programmatically. See `GET /v1/ota/audit-log` in the [API Reference](/api) for filtering and pagination options.

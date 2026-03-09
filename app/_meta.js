@@ -6,6 +6,7 @@ export default {
     },
   },
   'getting-started': 'Getting Started',
+  concepts: 'Core Concepts',
   updates: 'Updates',
   'feature-flags': 'Feature Flags',
   insights: 'Insights',

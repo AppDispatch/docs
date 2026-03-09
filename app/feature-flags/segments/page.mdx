@@ -8,12 +8,14 @@ Think of segments as saved filters — "iOS Pro Users" or "Beta Testers" — tha
 
 | | Inline attribute rule | Segment rule |
 |---|---|---|
-| **Scope** | One flag | Reusable across flags |
+| **Scope** | One flag | Reusable across flags and rollouts |
 | **Conditions** | Defined on the flag | Defined once, referenced by key |
 | **Maintenance** | Edit each flag individually | Update the segment, all flags reflect the change |
 | **Use case** | One-off targeting | Shared audiences used across multiple flags |
 
 If you find yourself copying the same conditions across flags, create a segment instead.
+
+Segments can be edited after creation — update conditions, match logic, or metadata at any time. Changes propagate to all flags and rollouts that reference the segment.
 
 ## Creating a segment
 
@@ -45,7 +47,7 @@ Conditions use the same operators as [attribute rules](/feature-flags#attribute-
 |----------|-------------|
 | `eq` / `neq` | Equals / not equals |
 | `in` / `not_in` | In list / not in list |
-| `contains`, `starts_with`, `ends_with` | String matching |
+| `contains`, `starts_with` | String matching |
 | `gt`, `gte`, `lt`, `lte` | Numeric comparison |
 | `semver_gte`, `semver_lte` | Semver comparison |
 | `exists` / `not_exists` | Attribute presence (no value needed) |
@@ -59,9 +61,9 @@ Conditions use the same operators as [attribute rules](/feature-flags#attribute-
 
 Segments can include OTA context attributes like `ota.branch`, `ota.runtime_version`, and `ota.updated_within_days`. This means a segment can define an audience like "Android devices on runtime 2.4.0+ from the canary branch" — combining user attributes with device update state in a single reusable definition.
 
-## Using segments in flag rules
+## Using segments in flag rules and rollouts
 
-When adding a targeting rule to a flag, select **Segment** as the rule type and pick from the dropdown. The rule card shows:
+When adding a targeting rule to a flag or rollout, select **Segment** as the rule type and pick from the dropdown. The rule card shows:
 
 - Segment name and estimated device count
 - All conditions with match logic (AND/OR)
@@ -86,7 +88,7 @@ Estimates are approximate and based on the most recent context data from active 
 
 ## Reference tracking
 
-The segment detail view shows a **Referenced by** list — every flag that uses this segment as a targeting rule. You can't delete a segment that's still referenced by flags. Remove the segment rules from those flags first, then delete.
+The segment detail view shows a **Referenced by** list — every flag or rollout that uses this segment as a targeting rule. You can't delete a segment that's still referenced by flags or rollouts. Remove the segment rules from those flags and rollouts first, then delete.
 
 ## Segments vs. channels
 

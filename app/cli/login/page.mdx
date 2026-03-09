@@ -5,19 +5,26 @@ Authenticate the CLI with AppDispatch.
 ## Usage
 
 ```bash
-dispatch login --key <API_KEY>
+dispatch login --server <SERVER_URL> --key <API_KEY>
 ```
 
 ## Options
 
 | Flag | Required | Description |
 |------|----------|-------------|
+| `--server` | No | Server URL (defaults to `https://api.appdispatch.com`; use for self-hosted instances) |
 | `--key` | Yes | API key from **Dashboard → Settings → API Keys** |
 
-## Example
+## Examples
 
 ```bash
 dispatch login --key dk_live_abc123
+```
+
+For self-hosted instances, pass your server URL:
+
+```bash
+dispatch login --server https://dispatch.yourcompany.com --key dk_live_abc123
 ```
 
 ## What it does

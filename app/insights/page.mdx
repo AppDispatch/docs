@@ -1,6 +1,12 @@
 # Telemetry
 
-AppDispatch tracks health metrics across updates, flags, and devices — and correlates them automatically. When a crash spike happens, you can see which flag variation and which update version are involved without digging through logs.
+When something breaks in a mobile app, the first question is always: *was it the release or the flag?* With separate tools for deployment and feature flags, you're left guessing. AppDispatch owns both pipelines, so it can answer that automatically.
+
+> **Crash spike detected**
+>
+> Runtime version: `49.0.0` · Flag: `new-checkout = true` · Channel: production · Affected devices: 4%
+
+Instead of digging through logs to correlate a crash with a deploy, AppDispatch surfaces the exact flag variation, release version, and channel in one view. This is **cross-dimensional attribution** — every error is tagged with the device's flag state and release version at the moment it occurred.
 
 ## Overview metrics
 
@@ -15,7 +21,7 @@ The telemetry dashboard shows four summary metrics, weighted by flag variation:
 
 ## Error rate over time
 
-An area chart showing error rate trends over 14, 30, or 90 days. Spikes are visually obvious and can be cross-referenced with the correlated events below.
+An area chart showing error rate trends over 7, 14, or 30 days. Spikes are visually obvious and can be cross-referenced with the correlated events below.
 
 ## Flag evaluations over time
 
@@ -23,7 +29,7 @@ A bar chart showing daily flag evaluation counts. Useful for spotting sudden dro
 
 ## Correlated events
 
-This is the core attribution feature. AppDispatch automatically detects anomalies and attributes them to specific flag variations and update versions:
+AppDispatch automatically detects anomalies and attributes them to specific flag variations and release versions:
 
 | Field | Description |
 |-------|-------------|
@@ -31,9 +37,9 @@ This is the core attribution feature. AppDispatch automatically detects anomalie
 | **Severity** | `critical`, `warning`, `info` |
 | **Status** | `incident`, `degraded`, `healthy` |
 | **Flag variation** | Which flag + variation is correlated with the anomaly |
-| **Runtime version** | Which update version is correlated |
+| **Runtime version** | Which release version is correlated |
 
-When a crash spike happens, instead of asking "was it the update or the flag?", you see: *"crash_spike on `new-checkout = true` + runtime version 49.0.0 on production"*. This cross-dimensional attribution is only possible because AppDispatch owns both the update pipeline and the flag evaluation — it knows which devices have which code **and** which flag state.
+Each correlated event tells you exactly what combination of code and configuration triggered the issue — so you can revert a single flag or roll back a release with confidence, not guesswork.
 
 ## Flag impact matrix
 
@@ -47,7 +53,6 @@ A table that slices health metrics by flag variation, update version, and channe
 | **Devices** | Number of devices in this slice |
 | **Error rate** | Error rate with a delta badge showing change from baseline |
 | **Crash-free** | Crash-free percentage (highlighted red if below 99%) |
-| **Avg session duration** | Average session length with delta showing change |
 
 ### Filtering
 
@@ -65,4 +70,4 @@ The flag impact matrix answers questions like:
 - *"Did runtime version 49 introduce a regression?"* — Compare rows with different runtime versions for the same flag state
 - *"Is the issue specific to production or also on staging?"* — Filter by channel
 
-This is the surface that makes release flags and rollout policies actionable — you're not just deploying progressively, you're measuring the impact of each variation at each stage.
+This is the surface that makes linked flags and rollout policies actionable — you're not just deploying progressively, you're measuring the impact of each variation at each stage.

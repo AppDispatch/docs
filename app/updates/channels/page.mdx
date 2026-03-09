@@ -1,21 +1,21 @@
 # Channels & Branches
 
-Channels and branches control which updates reach which devices.
+Channels and branches control which releases reach which devices.
 
 ## How they relate
 
-**Branch** — A named stream of updates. Each update is published to a branch.
+**Branch** — A named stream of releases. Each release is published to a branch.
 
-**Channel** — What devices connect to. Each channel points to a branch. When a device requests the latest update for a channel, the server looks up the branch and returns the latest update on that branch.
+**Channel** — What devices connect to. Each channel points to a branch. When a device requests the latest release for a channel, the server looks up the branch and returns the latest release on that branch.
 
 ```mermaid
 flowchart LR
-  P["Channel: production"] --> M["Branch: main"] --> U1["Update v2.1"]
-  S["Channel: staging"] --> ST["Branch: staging"] --> U2["Update v2.2-rc1"]
+  P["Channel: production"] --> M["Branch: main"] --> U1["Release v2.1"]
+  S["Channel: staging"] --> ST["Branch: staging"] --> U2["Release v2.2-rc1"]
   B["Channel: beta"] --> M
 ```
 
-Multiple channels can point to the same branch. This lets you "promote" an update by repointing a channel rather than re-publishing.
+Multiple channels can point to the same branch. This lets you "promote" a release by repointing a channel rather than re-publishing.
 
 ## Creating channels
 
@@ -60,7 +60,7 @@ Rollout bucketing is **deterministic** — a given device always lands in the sa
 
 ## User overrides
 
-Override specific users to receive updates from a different branch, regardless of their channel configuration:
+Override specific users to receive releases from a different branch, regardless of their channel configuration:
 
 ```bash
 curl -X POST https://api.appdispatch.com/v1/ota/user-overrides \
@@ -74,7 +74,7 @@ User overrides take priority over channel rollout. This is useful for internal t
 
 ## Minimum runtime version
 
-Channels can enforce a **minimum runtime version**. If a device's runtime version is below the minimum, the server tells the device to update via the app store instead of delivering an OTA update.
+Channels can enforce a **minimum runtime version**. If a device's runtime version is below the minimum, the server tells the device to update via the app store instead of delivering an OTA release.
 
 ```bash
 curl -X PATCH https://api.appdispatch.com/v1/ota/channels/production \

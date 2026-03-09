@@ -1,13 +1,13 @@
 # CI/CD Pipeline
 
-Automate OTA deployments with GitHub Actions so every push to `main` publishes an update — unless native code changed.
+Automate OTA deployments with GitHub Actions so every push to `main` publishes a release — unless native code changed.
 
 ## Overview
 
 The workflow below does two things:
 
 1. **Detects native changes** — If iOS/Android code, Podfile, Gradle files, or native dependencies changed, the OTA deploy is skipped with a warning. Those changes require a full app store build.
-2. **Publishes an OTA update** — If only JavaScript changed, it installs the Dispatch CLI and publishes the update to your chosen channel.
+2. **Publishes an OTA release** — If only JavaScript changed, it installs the Dispatch CLI and publishes the release to your chosen channel.
 
 ## Setup
 
@@ -24,7 +24,7 @@ In your GitHub repo, go to **Settings → Secrets and variables → Actions** an
 Copy this to `.github/workflows/ota-deploy.yml` in your React Native app repo:
 
 ```yaml filename=".github/workflows/ota-deploy.yml"
-name: OTA Update
+name: OTA Release
 
 on:
   push:
@@ -41,7 +41,7 @@ on:
           - staging
           - canary
       is_critical:
-        description: 'Mark as critical update (force immediate reload)'
+        description: 'Mark as critical release (force immediate reload)'
         required: false
         default: false
         type: boolean
@@ -112,7 +112,7 @@ jobs:
           echo "native_changed=$NATIVE_CHANGED" >> "$GITHUB_OUTPUT"
 
   deploy-ota:
-    name: Publish OTA update
+    name: Publish OTA release
     needs: check-native-changes
     if: needs.check-native-changes.outputs.native_changed == 'false'
     runs-on: ubuntu-latest
@@ -139,7 +139,7 @@ jobs:
       - name: Login to Dispatch
         run: dispatch login --key "$DISPATCH_API_KEY"
 
-      - name: Publish update
+      - name: Publish release
         run: |
           ARGS=(
             --channel "${{ inputs.channel || 'production' }}"
@@ -161,11 +161,11 @@ jobs:
     steps:
       - name: Skip OTA - native changes require full build
         run: |
-          echo "::warning::Native dependencies changed — OTA update skipped."
+          echo "::warning::Native dependencies changed — OTA release skipped."
           echo "Changes to iOS/Android native code, Podfile, build.gradle, or package dependencies"
           echo "require a full app store build."
           echo ""
-          echo "After submitting the new binary, future JS-only pushes will resume OTA deploys."
+          echo "After submitting the new binary, future JS-only pushes will resume OTA releases."
 ```
 
 ## How it works
@@ -180,14 +180,14 @@ The `check-native-changes` job inspects the diff between the current and previou
 - `app.json`, `app.config.js`, `app.config.ts` — Expo config (may change native modules)
 - `package.json` — Checked for added or removed dependencies (version bumps are ignored)
 
-If native changes are detected, the OTA deploy is skipped and a warning annotation appears on the workflow run.
+If native changes are detected, the OTA release is skipped and a warning annotation appears on the workflow run.
 
 ### Manual triggers
 
 You can trigger the workflow manually from the **Actions** tab in GitHub to:
 
 - **Choose a channel** — Deploy to `production`, `staging`, or `canary`
-- **Mark as critical** — Forces an immediate reload on devices instead of waiting for the next app launch
+- **Mark as critical** — Forces an immediate reload on devices instead of waiting for the next app launch (`isCritical`)
 - **Set rollout percentage** — Gradually roll out to a subset of users (e.g. `10` for 10%)
 
 ### Pinning the CLI version

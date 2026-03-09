@@ -1,8 +1,20 @@
 # AppDispatch
 
-**Ship OTA updates and feature flags for Expo & React Native.**
+**Continuous delivery for Expo & React Native.**
 
-AppDispatch delivers over-the-air updates and evaluates feature flags for Expo & React Native. Push updates instantly without app store review, control rollouts with channels, and toggle features per environment.
+Most mobile teams use three separate tools to ship safely: one for OTA updates, one for feature flags, and one for crash monitoring. When something breaks, you're left stitching together dashboards to figure out if it was the deploy or the flag. AppDispatch replaces all three with one platform — so deploying code, enabling features, measuring impact, and rolling back are a single workflow, not a juggling act.
+
+```jsx
+import { useBooleanFlagValue } from '@appdispatch/react-native'
+
+function CheckoutButton() {
+  const newCheckout = useBooleanFlagValue('new-checkout', false)
+
+  return newCheckout ? <NewCheckoutFlow /> : <LegacyCheckout />
+}
+```
+
+Toggle `new-checkout` from the dashboard. Your app updates instantly — no deploy required.
 
 ---
 
@@ -12,34 +24,37 @@ import { Cards } from 'nextra/components'
 
 <Cards>
   <Cards.Card title="Quickstart" href="/getting-started" />
-  <Cards.Card title="First Feature Flag" href="/getting-started/first-flag" />
-  <Cards.Card title="OTA Updates" href="/updates" />
+  <Cards.Card title="Core Concepts" href="/concepts" />
+  <Cards.Card title="OTA Releases" href="/updates" />
   <Cards.Card title="Feature Flags" href="/feature-flags" />
 </Cards>
 
-## How it works
+## One system, not three
 
 ```mermaid
 flowchart LR
-  A[Developer] -->|dispatch publish| B[AppDispatch Server]
-  B -->|manifest| C[Device]
-  C -->|download assets| D[Update Applied]
-  B -->|flag definitions| E[OpenFeature SDK]
-  E -->|evaluate locally| F[Flag Value]
+  A["Deploy code"] -->|"publish to 5%"| B["Enable feature"]
+  B -->|"flag activates for rollout"| C["Measure impact"]
+  C -->|"health checks pass"| D["Ramp to 100%"]
+  C -.->|"crash spike"| E["Rollback"]
 ```
 
-1. **Push** — Export your Expo app and upload the bundle with the CLI
-2. **Route** — Channels map to branches. Control which users get which update
-3. **Ship** — Devices pull the latest manifest and download only changed assets
-4. **Toggle** — Feature flags are fetched once and evaluated on-device with no network calls
+With separate tools, each step is a manual handoff. With AppDispatch, they're wired together:
 
-## Key features
+1. **Deploy code** — Push a release to a percentage of devices with `dispatch publish`
+2. **Enable feature** — Linked flags activate only for devices that received the release
+3. **Measure impact** — Crash rate and error rate are tracked per flag variation and release version automatically
+4. **Ramp or rollback** — Rollout policies advance through stages when health thresholds pass. If metrics degrade, roll back a single flag, the entire release, or a whole channel.
 
-- **OTA updates** — Push JavaScript bundles without app store review
-- **Channels & branches** — Route updates to production, staging, or any environment
-- **Rollout policies** — Automate progressive rollouts with health-based stage gates
-- **Feature flags** — Toggle features per environment with [OpenFeature](https://openfeature.dev)
-- **Code-aware targeting** — Flag rules that know what runtime version is on the device, so flags can't activate without the code
-- **Targeting rules** — Target specific users, attributes, or roll out by percentage
+Because AppDispatch owns the update pipeline, the flag evaluation, and the error collection, it knows which devices have which code **and** which flag state. That's what makes [cross-dimensional telemetry](/insights) possible — and why rollback can be surgical instead of all-or-nothing.
+
+## The platform
+
+- **OTA releases** — Push JavaScript bundles without app store review
+- **Feature flags** — Toggle features per environment with [OpenFeature](https://openfeature.dev), evaluated on-device with no network calls
+- **Linked flags** — Tie flag state to a release so features activate only for devices that have the code
+- **Rollout policies** — Automate progressive deployments with health-based stage gates and auto-rollback
+- **Channels & branches** — Route releases to production, staging, or any environment
+- **Code-aware targeting** — Flag rules that reference runtime versions, so flags can't activate without the code
 - **Graduated rollback** — Revert a single flag, an entire release, or a whole channel
-- **Cross-dimensional telemetry** — Automatically correlate crash spikes with specific flag variations and update versions
+- **Cross-dimensional telemetry** — Correlate crash spikes with specific flag variations and release versions automatically

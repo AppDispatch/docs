@@ -65,9 +65,8 @@ Attribute rules support these operators:
 | `not_in` | Not in list | `country not_in ["CN"]` |
 | `contains` | String contains | `email contains "@company.com"` |
 | `starts_with` | String starts with | `email starts_with "admin"` |
-| `ends_with` | String ends with | `email ends_with "@internal.co"` |
 | `gt`, `gte`, `lt`, `lte` | Numeric comparison | `age gte 18` |
-| `semver_gt`, `semver_gte`, `semver_lt`, `semver_lte` | Semver comparison | `appVersion semver_gte "2.0.0"` |
+| `semver_gte`, `semver_lte` | Semver comparison | `appVersion semver_gte "2.0.0"` |
 | `exists` | Attribute is present | `beta_tester exists` |
 | `not_exists` | Attribute is absent | `legacy_flag not_exists` |
 
@@ -133,7 +132,7 @@ Every flag tracks health metrics per variation — error rate, crash-free percen
 
 In the flag detail view, evaluation analytics show daily volume, per-variation breakdowns, and a time-series chart. The health panel compares variations side-by-side so you can see if one variation is performing worse than another.
 
-See [Flag Health](/insights/flag-health) for the full breakdown, and [Telemetry](/insights) for cross-dimensional attribution across flags and updates.
+See [Flag Health](/insights/flag-health) for the full breakdown, and [Telemetry](/insights) for cross-dimensional attribution across flags and releases.
 
 ## Per-environment settings
 
@@ -147,20 +146,20 @@ Flags can be configured independently per **channel** (environment). Enable a fl
 4. **Production** — Increase to 50%, then 100%
 5. **All environments** — Remove the flag, clean up code
 
-## Release flags
+## Linked flags
 
-Flags can be **scoped to a release** instead of toggled globally. When you publish an update with a [rollout policy](/updates/rollout-policies), you can attach flags and set their target value — a boolean toggle, a specific string variation, a number, or a JSON object. The override is only active for devices that received that release. Everyone else sees the global flag state.
+Flags can be **linked to a release** instead of toggled globally. When you publish an update with a [rollout policy](/updates/rollout-policies), you can attach flags and set their target value — a boolean toggle, a specific string variation, a number, or a JSON object. The override is only active for devices that received that release. Everyone else sees the pre-release state.
 
-The rollout policy controls both the update delivery **and** the flag state. At 5% rollout, only those 5% of devices see the release flag value. Because flag state is tied to the release, rollback is graduated — you can [revert a single flag](/updates/rollout-policies#flag-level-rollback) while keeping the update deployed, roll back the entire release, or roll back an entire channel.
+The rollout policy controls both the update delivery **and** the flag state. At 5% rollout, only those 5% of devices see the linked flag value. Because flag state is tied to the release, rollback is graduated — you can [revert a single flag](/updates/rollout-policies#flag-level-rollback) while keeping the update deployed, roll back the entire release, or roll back an entire channel.
 
 Flag evaluation order:
 
 1. Is the device on a release that configures this flag? → Return the release's value
-2. Otherwise → Evaluate global flag rules (targeting, percentage rollout, default)
+2. Otherwise → Evaluate flag rules as normal (targeting, percentage rollout, default)
 
 Once a release reaches 100%, the release's job is done. From there, manage the flag through the normal Feature Flags UI — change variations, update targeting rules, or clean up the flag entirely.
 
-See [Rollout Policies](/updates/rollout-policies#release-flags) for the full workflow, including multi-type examples and the release-to-global handoff pattern.
+See [Rollout Policies](/updates/rollout-policies#linked-flags) for the full workflow, including multi-type examples and the release-to-global handoff pattern.
 
 ## Evaluation reasons
 

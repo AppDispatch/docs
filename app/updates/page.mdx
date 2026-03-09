@@ -1,16 +1,18 @@
-# How Updates Work
+# How Releases Work
 
-AppDispatch delivers over-the-air JavaScript bundle updates to your Expo and React Native apps without going through app store review.
+> **Terminology note:** AppDispatch refers to OTA updates as **releases** throughout the dashboard. The underlying mechanism is the standard Expo `expo-updates` OTA update system — "release" is the AppDispatch term for a published update bundle.
 
-## The update cycle
+AppDispatch delivers over-the-air JavaScript bundle releases to your Expo and React Native apps without going through app store review.
 
-When you publish an update, the server stores your JavaScript bundle and assets. When a device launches your app, `expo-updates` requests the latest manifest. If there's a newer update, the device downloads the changed assets and applies it.
+## The release cycle
+
+When you publish a release, the server stores your JavaScript bundle and assets. When a device launches your app, `expo-updates` requests the latest manifest. If there's a newer release, the device downloads the changed assets and applies it.
 
 ```mermaid
 flowchart TD
   A[dispatch publish] --> B[Server stores bundle + assets]
   B --> C[Device requests manifest on launch]
-  C --> D{Update available?}
+  C --> D{New release available?}
   D -->|Yes| E[Download changed assets]
   D -->|No| F[Keep current version]
   E --> G[Apply on next reload]
@@ -25,6 +27,17 @@ dispatch publish -m "Fix checkout button alignment"
 ```
 
 See [`dispatch publish`](/cli/publish) for all options.
+
+### Publish options
+
+The dashboard publish flow is a two-step wizard with more options than the CLI shorthand:
+
+- **Multi-channel publishing** — Publish the same build to multiple channels at once (e.g., staging and production).
+- **Release notes** — Attach a human-readable message to the release.
+- **Initial rollout percentage** — Set a per-release rollout slider (0–100%) controlling what percentage of devices receive this release.
+- **Critical release** — Mark a release as critical (`isCritical`) to force an immediate app reload instead of waiting for the next cold start.
+- **Rollout policy** — Select a rollout policy to automate staged rollout and auto-rollback.
+- **Linked feature flags** — Attach feature flags to the release, with per-flag enable/disable or variation selection. Flags are toggled as the rollout progresses.
 
 ### With the API
 
@@ -45,7 +58,7 @@ curl -X POST https://api.appdispatch.com/v1/ota/builds/42/publish \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "X-Project: your-project-slug" \
   -H "Content-Type: application/json" \
-  -d '{"channel": "production", "rolloutPercentage": 100}'
+  -d '{"channel": "production", "rolloutPercentage": 100, "isCritical": false, "releaseMessage": "Fix checkout button", "linkedFlags": []}'
 ```
 
 ## Multi-platform releases
@@ -54,31 +67,48 @@ The CLI automatically groups iOS and Android builds under a single `groupId`. Wi
 
 ## Rollbacks
 
-Create a rollback to instantly revert devices to their embedded update:
+Create a rollback to revert devices to the embedded update, or target a specific prior release using `rollbackToUpdateId`:
 
 ```bash
+# Rollback to embedded update
 curl -X POST https://api.appdispatch.com/v1/ota/rollback \
   -H "Authorization: Bearer YOUR_API_KEY" \
   -H "X-Project: your-project-slug" \
   -H "Content-Type: application/json" \
-  -d '{"channelName": "production", "platform": "ios"}'
+  -d '{"runtimeVersion": "1.0.0", "platform": "ios", "channel": "production"}'
+
+# Rollback to a specific release
+curl -X POST https://api.appdispatch.com/v1/ota/rollback \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -H "X-Project: your-project-slug" \
+  -H "Content-Type: application/json" \
+  -d '{"runtimeVersion": "1.0.0", "platform": "ios", "channel": "production", "rollbackToUpdateId": 42}'
 ```
 
 ```mermaid
 flowchart TD
   A[Device requests manifest] --> B[Server sees rollback directive]
-  B --> C["Returns rollback response"]
-  C --> D[Device reverts to embedded update]
+  B --> C{"Target release specified?"}
+  C -->|Yes| D[Returns targeted release]
+  C -->|No| E[Returns rollback to embedded update]
 ```
 
-Rollbacks are instant (no download needed), non-destructive (the old update is still stored), and per-platform.
+Rollbacks are instant (no download needed when reverting to embedded), non-destructive (the old release is still stored), and per-platform.
 
-When using [rollout policies](/updates/rollout-policies), rollback is graduated — you can revert a single release flag, roll back the entire release, or roll back an entire channel. See [graduated rollback](/updates/rollout-policies#graduated-rollback) for details.
+### Per-release controls
+
+Each release has individual controls available from the dashboard or API:
+
+- **`isEnabled`** — Toggle a release on or off. Disabled releases are skipped by devices, effectively removing them from the channel without a full rollback.
+- **`isCritical`** — When enabled, devices apply this release immediately on detection instead of waiting for the next cold start.
+- **Rollout percentage** — A per-release slider (0–100%) controlling what fraction of devices receive this specific release.
+
+When using [rollout policies](/updates/rollout-policies), rollback is graduated — you can revert a single linked flag, roll back the entire release, or roll back an entire channel. See [graduated rollback](/updates/rollout-policies#graduated-rollback) for details.
 
 ## Content-addressed storage
 
-Assets are stored by their MD5 hash. Identical files across updates are never duplicated — uploads are fast and storage is efficient.
+Assets are stored by their MD5 hash. Identical files across releases are never duplicated — uploads are fast and storage is efficient.
 
 ## Runtime versions
 
-Each update is tagged with a **runtime version** fingerprint from your native dependencies. The server only delivers updates to devices with a matching runtime version. Changed native code requires an app store update.
+Each release is tagged with a **runtime version** fingerprint from your native dependencies. The server only delivers releases to devices with a matching runtime version. Changed native code requires an app store update.
