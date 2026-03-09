@@ -5,8 +5,7 @@ Get from zero to shipping OTA updates in under 5 minutes.
 ## Prerequisites
 
 - An Expo or React Native project
-- A running AppDispatch server
-- An API key (Settings → API Keys in the dashboard)
+- An AppDispatch account and API key (Settings → API Keys in the dashboard)
 
 ## 1. Install the CLI
 
@@ -33,15 +32,52 @@ dispatch init
 
 Select your project, and the CLI will configure `app.json` automatically.
 
-## 4. Publish your first update
+## 4. Install the SDK
+
+```bash npm2yarn
+npm install @appdispatch/react-native
+```
+
+## 5. Set up your app
+
+Add the SDK to your root layout. `AppDispatch.init()` configures everything — OTA updates, feature flags, and health reporting — in one call:
+
+```jsx title="app/_layout.tsx"
+import {
+  AppDispatch,
+  AppDispatchProvider,
+  useOTAUpdates,
+} from '@appdispatch/react-native'
+
+AppDispatch.init({
+  baseUrl: 'https://api.appdispatch.com',
+  projectSlug: 'my-app',
+  apiKey: 'YOUR_API_KEY',
+  channel: 'production',
+})
+
+export default function RootLayout() {
+  useOTAUpdates()
+
+  return (
+    <AppDispatchProvider>
+      <YourApp />
+    </AppDispatchProvider>
+  )
+}
+```
+
+- `AppDispatch.init()` — Initializes the OpenFeature provider and health reporter at module level
+- `useOTAUpdates()` — Checks for updates on launch, generates a stable device ID for rollout bucketing, and applies critical updates immediately. No-ops in `__DEV__` mode.
+- `AppDispatchProvider` — Wraps your app with the OpenFeature context and starts health monitoring
+
+## 6. Publish your first update
 
 ```bash
 dispatch publish -m "Initial release"
 ```
 
-Your app will pick up the update on next launch.
-
-## 5. Verify
+## 7. Verify
 
 Open your app on a device or simulator. On the next launch, `expo-updates` will fetch the new bundle from AppDispatch and apply it.
 
@@ -50,10 +86,15 @@ Open your app on a device or simulator. On the next launch, `expo-updates` will 
 ```mermaid
 flowchart LR
   A[Your Expo App] -->|expo export| B[Bundle + Assets]
-  B -->|dispatch publish| C[Server]
+  B -->|dispatch publish| C[AppDispatch]
   C -->|manifest request| D[Device]
   D -->|downloads changed assets| E[Update Applied]
 ```
+
+1. `dispatch publish` exported your app and uploaded the bundle
+2. Your device's `useOTAUpdates` hook checked for a new manifest
+3. Changed assets were downloaded and applied
+4. On next launch, the new code runs
 
 ## Next steps
 

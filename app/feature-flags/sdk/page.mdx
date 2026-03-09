@@ -1,44 +1,49 @@
 # SDK
 
-The AppDispatch SDK is an [OpenFeature](https://openfeature.dev) provider. Install it alongside the OpenFeature SDK for your platform.
+The AppDispatch SDK (`@appdispatch/react-native`) is a single package that handles OTA updates, feature flags, and health reporting. It wraps [OpenFeature](https://openfeature.dev) for flag evaluation and includes built-in error tracking with flag correlation.
 
 ## Installation
 
 ```bash npm2yarn
-npm install @appdispatch/openfeature-provider @openfeature/react-sdk
+npm install @appdispatch/react-native
 ```
 
-For server-side Node.js:
+Peer dependencies: `react` (≥18), `react-native` (≥0.70). `expo-updates` (≥0.20) is optional but required for OTA update features.
 
-```bash npm2yarn
-npm install @appdispatch/openfeature-provider @openfeature/server-sdk
-```
+## Setup
 
-## React / React Native setup
+Initialize the SDK at module level (before any component renders), then wrap your app with `AppDispatchProvider`:
 
-```jsx
-import { OpenFeature, OpenFeatureProvider } from '@openfeature/react-sdk'
-import { DispatchProvider } from '@appdispatch/openfeature-provider'
+```jsx title="app/_layout.tsx"
+import {
+  AppDispatch,
+  AppDispatchProvider,
+  useOTAUpdates,
+} from '@appdispatch/react-native'
 
-OpenFeature.setProvider(
-  new DispatchProvider({
-    baseUrl: 'https://api.appdispatch.com',
-    projectSlug: 'your-project',
-    apiKey: 'YOUR_API_KEY',
-    channel: 'production',
-  })
-)
+AppDispatch.init({
+  baseUrl: 'https://api.appdispatch.com',
+  projectSlug: 'my-app',
+  apiKey: 'YOUR_API_KEY',
+  channel: 'production',
+})
 
-export default function App() {
+export default function RootLayout() {
+  useOTAUpdates()
+
   return (
-    <OpenFeatureProvider>
+    <AppDispatchProvider>
       <YourApp />
-    </OpenFeatureProvider>
+    </AppDispatchProvider>
   )
 }
 ```
 
+That's it. `AppDispatch.init()` sets up the OpenFeature provider and health reporter. `AppDispatchProvider` wraps your app with the OpenFeature context and starts health monitoring on mount. `useOTAUpdates()` checks for OTA updates, handles device ID generation, and applies critical updates immediately.
+
 ## Evaluating flags
+
+Flag hooks are re-exported from `@appdispatch/react-native` — no need to import from `@openfeature/react-sdk` directly:
 
 ```jsx
 import {
@@ -46,7 +51,7 @@ import {
   useStringFlagValue,
   useNumberFlagValue,
   useObjectFlagValue,
-} from '@openfeature/react-sdk'
+} from '@appdispatch/react-native'
 
 function MyComponent() {
   // Boolean — kill switches, feature toggles
@@ -64,6 +69,14 @@ function MyComponent() {
 ```
 
 The second argument is the **default value** — returned when the flag doesn't exist, is disabled, or the provider hasn't loaded yet.
+
+For more detailed evaluation results, use the `Details` variants:
+
+```jsx
+import { useBooleanFlagDetails } from '@appdispatch/react-native'
+
+const { value, reason, variant } = useBooleanFlagDetails('new-checkout', false)
+```
 
 ## Setting evaluation context
 
@@ -100,49 +113,66 @@ OpenFeature.setContext({
 })
 ```
 
-## Server-side usage
+## Health reporting
 
-```js
-import { OpenFeature } from '@openfeature/server-sdk'
-import { DispatchProvider } from '@appdispatch/openfeature-provider'
+Health reporting is built into the SDK — no separate package needed. The `AppDispatchProvider` starts health monitoring automatically on mount and stops it on unmount.
 
-OpenFeature.setProvider(
-  new DispatchProvider({
-    baseUrl: 'https://api.appdispatch.com',
-    projectSlug: 'your-project',
-    apiKey: 'YOUR_API_KEY',
-    channel: 'production',
-  })
-)
+To record custom events or errors manually, access the health reporter via `AppDispatch.instance`:
 
-const client = OpenFeature.getClient()
+```jsx
+// Record custom business events
+AppDispatch.instance.health.recordEvent('checkout_success')
 
-// Evaluate with user context
-const enabled = await client.getBooleanValue(
-  'new-checkout',
-  false,
-  { targetingKey: request.userId }
-)
+// Record errors manually
+AppDispatch.instance.health.recordError('Payment gateway timeout')
+
+// Force flush buffered events
+await AppDispatch.instance.health.flush()
 ```
 
-## Provider options
+See [Health Reporter](/feature-flags/health-reporter) for details on auto-capture, flag correlation, and event deduplication.
 
-| Option | Required | Default | Description |
-|--------|----------|---------|-------------|
-| `baseUrl` | Yes | — | AppDispatch API URL |
-| `projectSlug` | Yes | — | Project slug from the dashboard |
-| `apiKey` | No | — | API key for authenticated requests |
-| `channel` | No | — | Channel (e.g., `production`, `staging`) |
-| `pollIntervalMs` | No | `30000` | How often to refresh flag definitions (ms) |
-| `flushIntervalMs` | No | `60000` | How often to send evaluation reports (ms). Set to `0` to disable. |
+## Configuration options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `baseUrl` | string | **required** | AppDispatch API URL |
+| `projectSlug` | string | **required** | Project slug from the dashboard |
+| `apiKey` | string | — | API key for authenticated requests |
+| `channel` | string | — | Channel (e.g., `production`, `staging`) |
+| `deviceId` | string | — | Stable device identifier. Auto-generated and persisted if omitted. |
+| `platform` | string | — | `"ios"` or `"android"`. Auto-detected from React Native if omitted. |
+| `updateId` | string | — | Current OTA update ID. Auto-detected from expo-updates if omitted. |
+| `runtimeVersion` | string | — | Runtime version. Auto-detected from expo-updates if omitted. |
+| `flagPollIntervalMs` | number | `30000` | How often to refresh flag definitions (ms) |
+| `flagFlushIntervalMs` | number | `60000` | How often to send evaluation reports (ms) |
+| `healthFlushIntervalMs` | number | `30000` | How often to send health events (ms). Set to `0` to disable. |
+| `autoCaptureErrors` | boolean | `true` | Auto-capture JS errors and crashes via `ErrorUtils` |
+| `trackAppLaunches` | boolean | `true` | Track app launches via `AppState` |
+| `maxBufferSize` | number | `100` | Max health events before forcing a flush |
 
 ## How it works
 
-1. On initialization, the provider fetches all flag definitions in one request
-2. Definitions are cached in memory
-3. Polls for updates every 30 seconds (configurable)
+1. `AppDispatch.init()` creates the OpenFeature provider and health reporter, wiring flag correlation automatically
+2. The provider fetches all flag definitions in one request and caches them in memory
+3. Polls for flag definition updates every 30 seconds (configurable)
 4. Flag evaluations happen locally — no network call per evaluation
 5. Deterministic hashing ensures stable rollout bucketing
-6. Evaluations are batched and reported to the server every 60 seconds for analytics
+6. Evaluations are batched and reported every 60 seconds for analytics
+7. Health events (errors, crashes, launches) are buffered and flushed every 30 seconds
+8. Errors are correlated with active flag states at the moment they occur
 
-See [OpenFeature Provider](/feature-flags/openfeature) for the full architecture.
+See [OpenFeature Provider](/feature-flags/openfeature) for the full evaluation architecture.
+
+## Advanced: accessing internals
+
+The `AppDispatch.instance` object exposes the underlying provider and health reporter for advanced use cases:
+
+```jsx
+// Access the OpenFeature provider directly
+const provider = AppDispatch.instance.provider
+const flags = provider.getFlags() // All loaded flag definitions
+
+// Access the health reporter directly
+const health = AppDispatch.instance.health
+```

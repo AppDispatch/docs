@@ -1,0 +1,125 @@
+# Health Reporter
+
+The health reporter is built into `@appdispatch/react-native` — no separate package needed. It collects JS errors, crashes, custom events, and app launches, and reports them to AppDispatch in batches. When an error occurs, it snapshots which flag variations are active, enabling the [cross-dimensional attribution](/insights) that powers flag health and telemetry.
+
+## Setup
+
+If you're using `AppDispatchProvider` (the recommended setup), health monitoring starts automatically on mount and stops on unmount. No extra configuration needed:
+
+```jsx
+import { AppDispatch, AppDispatchProvider } from '@appdispatch/react-native'
+
+AppDispatch.init({
+  baseUrl: 'https://api.appdispatch.com',
+  projectSlug: 'my-app',
+  channel: 'production',
+})
+
+export default function App() {
+  return (
+    <AppDispatchProvider>
+      <YourApp />
+    </AppDispatchProvider>
+  )
+}
+```
+
+Health reporting options are part of the `AppDispatch.init()` configuration:
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `healthFlushIntervalMs` | number | `30000` | How often to send buffered events. Set to `0` to disable auto-flush. |
+| `autoCaptureErrors` | boolean | `true` | Auto-capture JS errors and crashes via `ErrorUtils` |
+| `trackAppLaunches` | boolean | `true` | Track app launches via `AppState` |
+| `maxBufferSize` | number | `100` | Max buffered events before forcing a flush |
+
+## Auto-capture
+
+When `autoCaptureErrors` is enabled (the default), the reporter hooks into React Native's `ErrorUtils` to capture unhandled JS errors:
+
+- **Fatal errors** are recorded as `crash` events
+- **Non-fatal errors** are recorded as `js_error` events
+- The existing error handler is preserved — the reporter chains onto it, not replaces it
+
+When `trackAppLaunches` is enabled, the reporter detects app launches via `AppState` transitions (`background/inactive → active`) and records `app_launch` events.
+
+Both hooks gracefully no-op if running outside React Native.
+
+## Recording events manually
+
+Access the health reporter via `AppDispatch.instance.health`:
+
+```jsx
+import { AppDispatch } from '@appdispatch/react-native'
+
+// Custom business events
+AppDispatch.instance.health.recordEvent('checkout_success')
+AppDispatch.instance.health.recordEvent('payment_timeout')
+
+// Manual error recording
+AppDispatch.instance.health.recordError('API returned 500 on /cart')
+
+// Force flush buffered events
+await AppDispatch.instance.health.flush()
+```
+
+`recordEvent` creates a `custom` event. `recordError` creates a `js_error` event and snapshots the current flag states for correlation.
+
+Both accept an optional `count` parameter for pre-aggregated events:
+
+```jsx
+AppDispatch.instance.health.recordEvent('retry_attempt', 3)
+```
+
+## Flag state correlation
+
+This is the key feature. The SDK automatically wires flag correlation during `AppDispatch.init()` — no manual setup needed.
+
+When an error occurs, the reporter snapshots which flag variations are active **at the moment the error happens** — not at flush time. This captures a map of `flagKey → variationValue` from the provider's internal evaluation buffer and attaches it to the event.
+
+On the backend, these flag states are used to:
+- Attribute errors to specific flag variations in the [flag impact matrix](/insights#flag-impact-matrix)
+- Power per-variation health metrics in [flag health](/insights/flag-health)
+- Detect anomalies correlated with specific flags in [telemetry](/insights#correlated-events)
+
+## Event deduplication
+
+Events are deduplicated in the buffer by `(type, name, message)`. If the same error fires 50 times between flushes, it's sent as a single event with `count: 50` instead of 50 separate events. This keeps payloads small without losing signal.
+
+When a duplicate event is added, the most recent flag state snapshot overwrites the previous one, so the correlation reflects the latest state.
+
+## Flush behavior
+
+Events are sent to AppDispatch in two scenarios:
+
+1. **Timer** — Every 30 seconds (configurable via `healthFlushIntervalMs`)
+2. **Buffer full** — When the buffer reaches `maxBufferSize` events
+
+Each flush POSTs to `/v1/ota/health-metrics` with the buffered events, device metadata, and the current `expo-updates` state (update UUID and runtime version, resolved automatically).
+
+Network failures are handled gracefully — a warning is logged but events are not retried. This prevents unbounded memory growth on devices with poor connectivity.
+
+## Lifecycle
+
+When using `AppDispatchProvider`, the lifecycle is managed automatically — health monitoring starts on mount and stops (with a final flush) on unmount.
+
+For manual control:
+
+```jsx
+// Start collecting and flushing
+AppDispatch.instance.start()
+
+// Stop — tears down hooks, flushes remaining events
+await AppDispatch.instance.stop()
+```
+
+## Backend processing
+
+When events arrive at the backend:
+
+1. **Raw storage** — Events are inserted into a raw events table with a 30-day TTL
+2. **Hourly aggregation** — Counts are bucketed by hour, channel, platform, runtime version, and event type for efficient querying
+3. **Anomaly detection** — If the current hour's error count exceeds 2x the 24-hour average (and more than 5 errors), an anomaly event is created and correlated with the most common flag state in the error batch
+4. **Daily statistics** — Error rate and crash-free percentages are updated in the daily stats table
+
+This pipeline feeds the [telemetry dashboard](/insights), [flag health](/insights/flag-health), and the health thresholds used by [rollout policies](/updates/rollout-policies).

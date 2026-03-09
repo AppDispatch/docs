@@ -16,6 +16,8 @@ flowchart LR
 
 You write your flag evaluations once using the OpenFeature SDK. The provider handles the implementation details.
 
+The `@appdispatch/react-native` package re-exports all OpenFeature hooks (`useBooleanFlagValue`, `useStringFlagValue`, etc.) so you don't need to install or import from `@openfeature/react-sdk` directly.
+
 ## Client-side evaluation
 
 All evaluation happens on the device. The provider fetches a compact set of flag definitions (key, type, default value, rules, variations) and evaluates them locally.
@@ -45,7 +47,7 @@ Percentage rollouts use FNV-1a hashing of `flagKey + targetingKey` to produce a 
 
 ## Evaluation reporting
 
-The provider automatically reports flag evaluations back to AppDispatch for analytics. Evaluations are **batched in memory** and flushed every 60 seconds (configurable via `flushIntervalMs`). A final flush happens when the provider closes.
+The provider automatically reports flag evaluations back to AppDispatch for analytics. Evaluations are **batched in memory** and flushed every 60 seconds (configurable via `flagFlushIntervalMs`). A final flush happens when the provider closes.
 
 This powers the **Contexts** page and per-flag **evaluation charts** in the dashboard — showing which users evaluated which flags and how often.
 

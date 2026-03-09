@@ -312,6 +312,61 @@ Public endpoint used by the OpenFeature provider. Returns enabled flags with the
 
 ---
 
+## Health Metrics
+
+### Report health events (client endpoint)
+
+```
+POST /v1/ota/health-metrics
+```
+
+Public endpoint used by the [health reporter](/feature-flags/health-reporter) in `@appdispatch/react-native`. No authentication required.
+
+```json
+{
+  "projectSlug": "my-app",
+  "deviceId": "device-xyz",
+  "channel": "production",
+  "platform": "ios",
+  "runtimeVersion": "49.0.0",
+  "updateUuid": "abc-123",
+  "events": [
+    {
+      "type": "js_error",
+      "message": "TypeError: undefined is not an object",
+      "count": 3,
+      "flagStates": {
+        "new-checkout": true,
+        "theme": "dark"
+      }
+    },
+    {
+      "type": "app_launch",
+      "count": 1
+    }
+  ]
+}
+```
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `projectSlug` | string | Yes | Project slug |
+| `deviceId` | string | Yes | Stable device identifier |
+| `channel` | string | No | Channel name |
+| `platform` | string | Yes | `"ios"` or `"android"` |
+| `runtimeVersion` | string | Yes | Runtime version from expo-updates |
+| `updateUuid` | string | No | Current update UUID from expo-updates |
+| `events` | array | Yes | Array of health events |
+| `events[].type` | string | Yes | `"js_error"`, `"crash"`, `"custom"`, or `"app_launch"` |
+| `events[].name` | string | No | Event name (for custom events) |
+| `events[].message` | string | No | Error message |
+| `events[].count` | number | Yes | Number of occurrences (deduplicated client-side) |
+| `events[].flagStates` | object | No | Flag variations active at error time |
+
+Returns `204 No Content` on success.
+
+---
+
 ## Segments
 
 ### List segments

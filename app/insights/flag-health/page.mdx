@@ -55,10 +55,11 @@ This per-flag health tracking during rollouts is what enables surgical response 
 
 ## How metrics are collected
 
-The SDK reports flag evaluations back to AppDispatch in batches (every 60 seconds by default). Each report includes:
+Health metrics come from two sources working together:
 
-- Which flags were evaluated
-- Which variations were returned
-- The evaluation context (device ID, channel, runtime version)
+1. **Flag evaluations** — The [OpenFeature provider](/feature-flags/sdk) reports which flags were evaluated and which variations were returned, in batches every 60 seconds.
+2. **Health events** — The [health reporter](/feature-flags/health-reporter) in `@appdispatch/react-native` captures JS errors, crashes, and app launches, and snapshots which flag variations were active at the moment each error occurred.
 
-AppDispatch correlates this with device-level health signals (crash reports, error rates, session duration) to produce per-variation health metrics. Because the same platform handles both updates and flags, the attribution is automatic — no integration layer or custom instrumentation needed.
+When the health reporter is [connected to the provider](/feature-flags/health-reporter#flag-state-correlation), errors are automatically correlated with flag states. The backend aggregates these into per-variation health metrics — no custom instrumentation needed.
+
+See [Health Reporter](/feature-flags/health-reporter) for setup instructions.

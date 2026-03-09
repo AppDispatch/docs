@@ -1,6 +1,6 @@
 # First Feature Flag
 
-Ship a feature flag in under 5 minutes.
+Ship a feature flag in under 5 minutes. This guide assumes you've completed the [Quickstart](/getting-started) and have `@appdispatch/react-native` installed.
 
 ## 1. Create a flag in the dashboard
 
@@ -13,40 +13,10 @@ Open **Flags** in the sidebar and click **Create flag**.
 
 Click create, then toggle the flag **on** for your production channel.
 
-## 2. Install the SDK
-
-```bash
-npm install @appdispatch/openfeature-provider @openfeature/react-sdk
-```
-
-## 3. Initialize the provider
+## 2. Use the flag
 
 ```jsx
-import { OpenFeature, OpenFeatureProvider } from '@openfeature/react-sdk'
-import { DispatchProvider } from '@appdispatch/openfeature-provider'
-
-OpenFeature.setProvider(
-  new DispatchProvider({
-    baseUrl: 'https://api.appdispatch.com',
-    projectSlug: 'your-project',
-    apiKey: 'YOUR_API_KEY',
-    channel: 'production',
-  })
-)
-
-function App() {
-  return (
-    <OpenFeatureProvider>
-      <YourApp />
-    </OpenFeatureProvider>
-  )
-}
-```
-
-## 4. Use the flag
-
-```jsx
-import { useBooleanFlagValue } from '@openfeature/react-sdk'
+import { useBooleanFlagValue } from '@appdispatch/react-native'
 
 function CheckoutButton() {
   const newCheckout = useBooleanFlagValue('new-checkout', false)
@@ -58,7 +28,9 @@ function CheckoutButton() {
 }
 ```
 
-## 5. Toggle it
+No additional setup needed — the SDK was already initialized in your root layout during the [Quickstart](/getting-started).
+
+## 3. Toggle it
 
 Go back to the dashboard, toggle the flag off. Reload your app — the old checkout appears.
 
@@ -67,5 +39,6 @@ Toggle it on — the new checkout appears. No deploy needed.
 ## Next steps
 
 - [Add targeting rules](/feature-flags#targeting-rules) to roll out to a percentage of users
+- [Create segments](/feature-flags/segments) for reusable audience targeting
 - [Configure per-environment settings](/feature-flags#per-environment-settings) to test in staging first
 - [Learn how the OpenFeature provider works](/feature-flags/openfeature)
