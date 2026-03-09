@@ -4,17 +4,23 @@
 
 Most mobile teams use three separate tools to ship safely: one for OTA updates, one for feature flags, and one for crash monitoring. When something breaks, you're left stitching together dashboards to figure out if it was the deploy or the flag. AppDispatch replaces all three with one platform — so deploying code, enabling features, measuring impact, and rolling back are a single workflow, not a juggling act.
 
+```bash
+# Push a release to 5% of production
+$ dispatch publish --channel production --rollout 10 -m "New checkout flow"
+```
+
+Then link the `new-checkout` flag from the dashboard — it activates only for devices that received the release. AppDispatch tracks health automatically. If error rates spike, auto-rollback kicks in. If health gates pass, it ramps to 100%.
+
 ```jsx
 import { useBooleanFlagValue } from '@appdispatch/react-native'
 
 function CheckoutButton() {
   const newCheckout = useBooleanFlagValue('new-checkout', false)
-
   return newCheckout ? <NewCheckoutFlow /> : <LegacyCheckout />
 }
 ```
 
-Toggle `new-checkout` from the dashboard. Your app updates instantly — no deploy required.
+The flag evaluates on-device with no network calls — and because it's linked to the release, it only returns `true` for devices that have the code.
 
 ---
 
